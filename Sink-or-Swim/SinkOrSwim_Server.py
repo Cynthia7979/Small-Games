@@ -36,10 +36,10 @@ def main():
 def box_update(box, skt):
     skt.listen(5)
     c, addr = skt.accept()
-    string = skt.recv(1024)
+    string = c.recv(1024)
     type, string = string.split('_')
     if addr not in box.keys():
-        box[addr] = {'type':type, 'string':string,'ip':c}
+        box[addr] = {'type':type, 'string':string,'c':c}
     else:
         c.send('print type_connection failed')
     skt.close()

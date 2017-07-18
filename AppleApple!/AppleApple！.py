@@ -73,12 +73,16 @@ def plantTreeJustice(num, apple):
 wood = Material('wood', False, 3)
 stick = Material('stick', True, 1, (wood,))
 rock = Material('rock', False, 2)
-copper = Material('copper ingot', True, 5, (rock, rock))
+copper = Material('copper ingot', !
+True, 5, (rock, rock))
 iron = Material('iron ingot', True, 12, (copper, copper, copper))
 gold = Material('gold ingot', True, 27, (iron, iron, iron, iron))
 diamond = Material('diamond!', True, 58, (gold, gold, gold, gold, gold))
 # foods
-flesh = Food('flesh', 2, False, 2)
+flesh = Food('flesh', 2, False, 1)
+berry = Food('blue berry',5,False,2)
+egg = Food('egg',
+cake = Food('cake',20,True,10,(egg,egg,milk,flour))
 # mobs
 zombie = Mob('zombie', 20, 1, (flesh,))
 tree = Mob('tree', 10, 0.5, (wood, stick))

@@ -229,6 +229,5 @@ def exploreChoosingScreen(DISPLAYSURF,font,places):
                 return 'main'
         elif event.type == QUIT:
             pygame.quit()
-            sys.exit()
 if __name__ == '__main__':
     main()

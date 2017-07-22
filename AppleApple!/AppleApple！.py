@@ -4,7 +4,6 @@ from pygame.locals import *
 costPerTree = 0
 fullness = 20
 blood = 20
-pack = {}
 screenWidth = 800
 screenHeight = 600
 WHITE = (255,255,255)
@@ -97,28 +96,43 @@ placeToMobs = {'forest': (tree, tree, tree, tree, tree), 'farm': (cow, chicken, 
 
 
 def main(): # so messy QAQ
+    pack = {}
     pygame.init()
 
-    # load stats
-    name,apple, appleTree, costPerTree, thingsToAdd = readFile()
+    # load stats from file
+    name, apple, appleTree, costPerTree, thingsToAdd = readFile()
+    # add thing to pack
     for thing in thingsToAdd:
         if thing in pack.keys():
             pack[thing] += 1
         else:
             pack[thing] = 1
-
-    # variables
+    #print thing
+    # initalizing
     DISPLAYSURF = pygame.display.set_mode((screenWidth,screenHeight))
     pygame.display.set_caption('Apple Apple!')
     currentScreen = 'main'
+    currentItem = 0
+    weaponInUse = wooden_sword
+    tipText = 'Arriving ...'
+    # load images
     tree = pygame.image.load('./tree.png')
     font = pygame.font.Font('arial.ttf',32)
     forest = pygame.image.load('./forest.png')
     farm = pygame.image.load('./farm.png')
-    places = (forest,farm,forest,forest,forest,farm,farm,farm)
+    places = {'forest':forest,'farm':farm}
+    # load and set apple icon
+    appleImg = pygame.image.load('./apple.png')
+    appleImgRect = appleImg.get_rect()
+    appleImgRect.topleft = (0, 0)
 
     # main loop
     while True:
+        # set apple bar
+        appleTextSurface = font.render(':' + str(apple), True, BLACK)
+        appleTextRect = appleTextSurface.get_rect()
+        appleTextRect.topleft = (60, 10)
+
         # draw screen
         if currentScreen == 'main':
             DISPLAYSURF.fill(SKYBLUE)
@@ -131,21 +145,61 @@ def main(): # so messy QAQ
             exploreRect = pygame.Rect(670, 80, exploreTextRect.width, exploreTextRect.height)
             exploreTextRect.topleft = (670, 80)
             DISPLAYSURF.blit(exploreTextSurf, exploreTextRect)
+            packTextSurf = font.render('pack', True, WHITE, NAVYBLUE)
+            packTextRect = exploreTextSurf.get_rect()
+            packRect = pygame.Rect(670, 150, packTextRect.width, packTextRect.height)
+            packTextRect.topleft = (670,150)
+            DISPLAYSURF.blit(packTextSurf, packTextRect)
             for event in pygame.event.get():
                 if event.type == MOUSEBUTTONUP:
-                    pos = event.pos
-                    if pygame.Rect(pos[0], pos[1], 1, 1).colliderect(exploreRect):
+                    x,y = event.pos
+                    if pygame.Rect(x,y, 1, 1).colliderect(exploreRect):
                         currentScreen = 'explore choose'
+                    elif pygame.Rect(x,y,1,1).colliderect(packRect):
+                        currentScreen = 'pack'
+                    elif pygame.Rect(x,y,1,1).colliderect(appleImgRect):
+                        apple += pickApple(appleTree)
+                elif event.type == QUIT:
+                    pygame.quit()
+                    sys.exit()
         elif currentScreen == 'explore choose':
-            if exploreChoosingScreen(DISPLAYSURF,font,places) == 'main':
+            thingReturned = exploreChoosingScreen(DISPLAYSURF,font,places)
+            if thingReturned:
+                if thingReturned == 'main':
+                    currentScreen = 'main'
+                elif thingReturned[:4] == 'goto':
+                    currentScreen = 'place' + thingReturned[4:]
+                    #while True:
+                        #print thingReturned[4:]
+                    #currentScreen = 'main'
+        elif currentScreen == 'pack':
+            do, back = packScreen(DISPLAYSURF,font,pack,currentItem)
+            if currentItem < len(pack)-1 and currentItem > -len(pack):
+                currentItem += do
+            else:
+                currentItem = 0
+            if back:
                 currentScreen = 'main'
+        elif currentScreen[:5] == 'place':
+            DISPLAYSURF.fill(SKYBLUE)
+            place = currentScreen[5:]
+            mobs = placeToMobs[place]
+            tipTextSurface = font.render(tipText,True,BLACK)
+            tipTextRect = tipTextSurface.get_rect()
+            tipTextRect.center = (400,50)
+            DISPLAYSURF.blit(tipTextSurface,tipTextRect)
+            currentMob = 0
+            bloodIcon = pygame.image.load('./bloodIcon.png')
+            bloodTextSurf = font.render(': ' + str(blood),True,BLACK)
+            bloodTextRect = bloodTextSurf.get_rect()
+            bloodTextRect.topleft = (60,80)
+            DISPLAYSURF.blit(bloodTextSurf,bloodTextRect)
+            DISPLAYSURF.blit(bloodIcon,(0,80))
+            # TODO: fighting with mob and get things system
+
 
         # draw apple bar
-        appleImg = pygame.image.load('./apple.png')
-        DISPLAYSURF.blit(appleImg,(0,0))
-        appleTextSurface = font.render(':' + str(apple), True, BLACK)
-        appleTextRect = appleTextSurface.get_rect()
-        appleTextRect.topleft = (60, 10)
+        DISPLAYSURF.blit(appleImg, (0, 0))
         DISPLAYSURF.blit(appleTextSurface,appleTextRect)
 
         # event handling loop
@@ -158,6 +212,73 @@ def main(): # so messy QAQ
 
         pygame.display.update()
 
+
+
+def packScreen(DISPLAYSURF,font,pack,currentItem):
+    do = 0
+    back = False
+
+    DISPLAYSURF.fill(WHITE)
+    titleSurf = font.render('Pack',True,BLACK)
+    titleRect = titleSurf.get_rect()
+    titleRect.center = (400,50)
+    DISPLAYSURF.blit(titleSurf,titleRect)
+
+    leftArrow = pygame.image.load('./left.png')
+    leftRect = leftArrow.get_rect()
+    leftRect.topleft = (100,250)
+    rightArrow = pygame.image.load('./right.png')
+    rightRect = rightArrow.get_rect()
+    rightRect.topleft = (600,250)
+    DISPLAYSURF.blit(leftArrow,(100,250))
+    DISPLAYSURF.blit(rightArrow,(600,250))
+
+    backTextSurf = font.render('back', True, WHITE, NAVYBLUE)
+    backTextRect = backTextSurf.get_rect()
+    backButtonRect = pygame.Rect(700, 500, backTextRect.width, backTextRect.height)
+    backTextRect.topleft = (700, 500)
+    DISPLAYSURF.blit(backTextSurf, backTextRect)
+
+#    x = 50
+#    y = 100
+#    for item in pack.keys():
+#        itemSurf = font.render(item,True,BLACK)
+#        itemRect = itemSurf.get_rect()
+#        if x + itemRect.width > screenWidth:
+#            x = 50
+#            y += 100
+#        itemRect.topleft = (x,y)
+#        x += itemRect.width + 50
+#        if x >= screenWidth:
+#            y += 100
+#            x = 50
+#        DISPLAYSURF.blit(itemSurf,itemRect)
+    itemTexts = {}
+    for item in pack.keys():
+        itemSurf = font.render(item, True, BLACK)
+        itemRect = itemSurf.get_rect()
+        itemRect.center = (400,300)
+        numSurf = font.render(str(pack[item]),True,BLACK)
+        numRect = numSurf.get_rect()
+        numRect.topleft = (500,250)
+        itemTexts[item] = [itemSurf,itemRect,numSurf,numRect]
+    isurf,irect,nsurf,nrect = itemTexts[itemTexts.keys()[currentItem]]
+    DISPLAYSURF.blit(isurf,irect)
+    DISPLAYSURF.blit(nsurf,nrect)
+    for event in pygame.event.get():
+        if event.type == MOUSEBUTTONUP:
+            x,y = event.pos
+            if pygame.Rect(x,y,1,1).colliderect(leftRect):
+                do = -1
+            elif pygame.Rect(x,y,1,1).colliderect(rightRect):
+                do = 1
+            elif pygame.Rect(x,y,1,1).colliderect(backButtonRect):
+                back = True
+        elif event.type == QUIT:
+            pygame.quit()
+            sys.exit()
+    return (do,back)
+    # FIXME: if you only press left or right you may skip something...
 
 def readFile():
     f = open('.\UsrStat.txt')
@@ -215,19 +336,30 @@ def exploreChoosingScreen(DISPLAYSURF,font,places):
     DISPLAYSURF.blit(backTextSurf, backTextRect)
     x = 50
     y = 100
-    for place in places:
-       DISPLAYSURF.blit(place, (x, y))
-       x += 150
-       if x >= 800:
+    placeRects = {}
+    for place in places.keys():
+        placeSurf = places[place]
+        placeRect = placeSurf.get_rect()
+        placeRect.topleft = (x,y)
+        placeRects[place] = ((placeSurf,placeRect))
+        DISPLAYSURF.blit(placeSurf,placeRect)
+        x += 150
+        if x >= 800:
             y += 150
             x = 50
     for event in pygame.event.get():
         if event.type == MOUSEBUTTONUP:
             x,y = event.pos
             if pygame.Rect(x,y,1,1).colliderect(backButtonRect):
-                print 'back!'
+                #print 'back!'
                 return 'main'
+            for place in placeRects.keys():
+                if pygame.Rect(x,y,1,1).colliderect(placeRects[place][1]):
+                    return 'goto' + place
+
         elif event.type == QUIT:
             pygame.quit()
+            sys.exit()
+
 if __name__ == '__main__':
     main()

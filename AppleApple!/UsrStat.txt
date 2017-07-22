@@ -1,6 +1,8 @@
 Cynthia7979#usrname
-30000#apple
-3#appleTree
+0#apple
+30#appleTree
 1#costPerTree
 
-Wooden_Sword#pack
+a
+b
+c

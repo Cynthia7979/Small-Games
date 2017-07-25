@@ -2,7 +2,8 @@ Cynthia7979#usrname
 0#apple
 30#appleTree
 1#costPerTree
+20#blood
 
-a
-b
-c
+Food flesh 2 False 1
+Food egg 1 False 3
+Material wood False 3

@@ -10,6 +10,8 @@ WHITE = (255,255,255)
 NAVYBLUE = (0,0,128)
 SKYBLUE = (112,228,255)
 BLACK = (0,0,0)
+CLOCK = pygame.time.Clock()
+FPS = 30
 
 class Item(object):
     def __init__(self, itemName, isMaterial, isFood, isWeapon, isCraftable, cost, recipe=()):
@@ -98,10 +100,8 @@ placeToMobs = {'forest': (tree, tree, tree, tree, tree), 'farm': (cow, chicken, 
 def main():
     pygame.init()
     pack = {}
-
-
     # load stats from file
-    name, apple, appleTree, costPerTree, thingsToAdd = readFile()
+    name, apple, appleTree, costPerTree, startBlood, thingsToAdd = readFile()
     # add thing to pack
     for thing in thingsToAdd:
         if thing in pack.keys():
@@ -115,13 +115,20 @@ def main():
     currentScreen = 'main'
     currentItem = 0
     weaponInUse = wooden_sword
-    tipText = 'Arriving ...'
+    tipText = ''
+    currentLand = 0
+    mobBlood = None
+    mobs = None
+    playerBlood = startBlood
     # load images
     tree = pygame.image.load('./tree.png')
     font = pygame.font.Font('arial.ttf',32)
     forest = pygame.image.load('./forest.png')
     farm = pygame.image.load('./farm.png')
     places = {'forest':forest,'farm':farm}
+    land1 = pygame.image.load('./land.png')
+    land2 = pygame.image.load('./landAnimated.png')
+    lands = (land1, land2)
     # load and set apple icon
     appleImg = pygame.image.load('./apple.png')
     appleImgRect = appleImg.get_rect()
@@ -187,7 +194,10 @@ def main():
         elif currentScreen[:5] == 'place': # exploring screen, working on
             DISPLAYSURF.fill(SKYBLUE)
             place = currentScreen[5:] # cut the place string
-            mobs = placeToMobs[place] # get mobs to fight against
+            if not mobs:
+                mobs = list(placeToMobs[place]) # get mobs to fight against
+                #for mob in mobs:
+                #    print mob.name
             # draw tip text
             tipTextSurface = font.render(tipText,True,BLACK)
             tipTextRect = tipTextSurface.get_rect()
@@ -195,14 +205,43 @@ def main():
             DISPLAYSURF.blit(tipTextSurface,tipTextRect)
             # draw health (blood) icon
             bloodIcon = pygame.image.load('./bloodIcon.png')
-            DISPLAYSURF.blit(bloodIcon,(0,80))
-            # draw health (blood) measure (how many)
-            bloodTextSurf = font.render(': ' + str(blood),True,BLACK)
-            bloodTextRect = bloodTextSurf.get_rect()
-            bloodTextRect.topleft = (60,80)
-            DISPLAYSURF.blit(bloodTextSurf,bloodTextRect)
-            # initalize current mob
-            currentMob = 0
+            DISPLAYSURF.blit(bloodIcon,(0,80)) # player's
+            DISPLAYSURF.blit(bloodIcon,(650,80)) # mob's
+            # draw land
+            DISPLAYSURF.blit(lands[currentLand % 2],(0,500))
+            currentLand += 1
+            # draw health (blood) measure (how many) - player
+            playerbloodTextSurf = font.render(': ' + str(playerBlood),True,BLACK)
+            playerbloodTextRect = playerbloodTextSurf.get_rect()
+            playerbloodTextRect.topleft = (60,80)
+            DISPLAYSURF.blit(playerbloodTextSurf,playerbloodTextRect)
+            # get mob stat
+            mob = mobs[0]
+            if mobBlood == None:
+                mobBlood = mob.blood
+            # draw health measure - mob
+            mobBloodTextSurf = font.render(': ' + str(mobBlood),True,BLACK)
+            mobBloodTextRect = playerbloodTextSurf.get_rect()
+            mobBloodTextRect.topleft = (710,80)
+            DISPLAYSURF.blit(mobBloodTextSurf,mobBloodTextRect)
+            tipText = 'fighting with ' + mob.name
+            mobBlood -= weaponInUse.harm
+            playerBlood -= mob.damage
+            if playerBlood <= 0:
+                currentScreen = 'main'
+                playerBlood = 20
+            if mobBlood <= 0:
+                for trophie in mob.trophie:
+                    if mob.trophie in pack.keys():
+                        pack[mob.trophie] += 1
+                    else:
+                        pack[mob.trophie] = 1
+                del mobs[0]
+                for mob in mobs:
+                    print mob.name
+            if mobs == []:
+                currentScreen = 'main'
+                playerBlood = startBlood
             # TODO: fighting with mob and get things system
 
 
@@ -217,7 +256,7 @@ def main():
                 sys.exit()
 
 
-
+        CLOCK.tick(FPS)
         pygame.display.update() # update the window
 
 
@@ -262,16 +301,19 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
 #            y += 100
 #            x = 50
 #        DISPLAYSURF.blit(itemSurf,itemRect)
-    itemTexts = {}
+    itemNames = []
     for item in pack.keys():
+        itemNames.append(item.name)
+    itemTexts = {}
+    for itemName in itemNames:
         # set item name and number (how many of the item)
-        itemSurf = font.render(item, True, BLACK)
+        itemSurf = font.render(itemName, True, BLACK)
         itemRect = itemSurf.get_rect()
         itemRect.center = (400,300)
-        numSurf = font.render(str(pack[item]),True,BLACK)
+        numSurf = font.render(str(pack.values()[itemNames.index(itemName)]),True,BLACK)
         numRect = numSurf.get_rect()
         numRect.topleft = (500,250)
-        itemTexts[item] = [itemSurf,itemRect,numSurf,numRect]
+        itemTexts[itemName] = [itemSurf,itemRect,numSurf,numRect]
 # item surf;rect,number surf;rect
     isurf,irect,nsurf,nrect = itemTexts[itemTexts.keys()[currentItem]] # change to current item name
     DISPLAYSURF.blit(isurf,irect)
@@ -282,7 +324,7 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
             if pygame.Rect(x,y,1,1).colliderect(leftRect):
                 do = -1
             elif pygame.Rect(x,y,1,1).colliderect(rightRect):
-                do = 1
+                do = -1
             elif pygame.Rect(x,y,1,1).colliderect(backButtonRect):
                 back = True
         elif event.type == QUIT:
@@ -305,9 +347,25 @@ def readFile():
                 s = s[:n]
             details.append(s)
             # print s
-    pack = details[4:]
-    #       playername       apple       apple tree   apple cost per tree
-    return details[0], int(details[1]), int(details[2]), int(details[3]), pack
+    pack = []
+    stringedPack = details[5:]
+    for item in stringedPack:
+        stats = item.split(' ')
+        if stats[0] == 'Material':
+            if len(stats) < 5:
+                stats.append(())
+            addItem = Material(stats[1],bool(stats[2]),int(stats[3]),tuple(stats[4]))
+        elif stats[0] == 'Food':
+            if len(stats) < 6:
+                stats.append(())
+            addItem = Food(stats[1],int(stats[2]),bool(stats[3]),int(stats[4]),tuple(stats[5]))
+        elif stats[0] == 'Weapon':
+            addItem = Weapon(stats[1],int(stats[2]),int(stats[3]),tuple(stats[4]))
+        pack.append(addItem)
+
+
+    #       playername       apple       apple tree   apple cost per tree   start blood
+    return details[0], int(details[1]), int(details[2]), int(details[3]), int(details[4]), pack
 
 
 def pickApple(appleTree):

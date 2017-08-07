@@ -184,13 +184,30 @@ def main():
                         #print thingReturned[4:]
                     #currentScreen = 'main'
         elif currentScreen == 'pack': # pack viewing and managing screen
-            do, back = packScreen(DISPLAYSURF,font,pack,currentItem) # to switch item or not and go back or not
+            do, back, screen, weapon, sell = packScreen(DISPLAYSURF,font,pack,currentItem) # to switch item or not and go back or not
             if currentItem < len(pack)-1 and currentItem > -1 * (len(pack)): # not out of range
                 currentItem += do
             else:
                 currentItem = 0 # start over
             if back:
                 currentScreen = 'main' # go back
+            if screen:
+                currentScreen = screen
+            if weapon:
+                weaponInUse = weapon
+            if sell:
+                if len(pack.keys()) <= 1:
+                    pass
+                else:
+                    for item in pack.keys():
+                        if item == sell:
+                            apple += item.cost
+                            if pack[item] == 1:
+                                del pack[item]
+                            else:
+                                pack[item] -= 1
+                            currentItem += 1
+
         elif currentScreen[:5] == 'place': # exploring screen, working on
             DISPLAYSURF.fill(SKYBLUE)
             place = currentScreen[5:] # cut the place string
@@ -237,14 +254,15 @@ def main():
                         pack[trophie] += 1
                     else:
                         pack[trophie] = 1
+                mobBlood = None
                 del mobs[0]
                 #for mob in mobs:
                     #print mob.name
             if mobs == []: # victory
                 currentScreen = 'main'
-            # FIXME: The blood of the mob will go under zero,
-            # FIXME: and the blood of mob won't reset, it will be negative if next fight started
-            # FIXME: The mob won't change?
+        elif currentScreen == 'store':
+            pass
+            # TODO: Store screen and buy system
 
         # draw apple bar
         DISPLAYSURF.blit(appleImg, (0, 0))
@@ -253,6 +271,7 @@ def main():
         # event handling loop
         for event in pygame.event.get():
             if event.type == QUIT:
+                # TODO: save system
                 pygame.quit()
                 sys.exit()
 
@@ -265,6 +284,9 @@ def main():
 def packScreen(DISPLAYSURF,font,pack,currentItem):
     do = 0 # switch the item
     back = False # go back to home page?
+    screen = None # go to which screen?
+    weapon = None
+    sell = None # if sell something it will become the thing
 
     DISPLAYSURF.fill(WHITE)
 
@@ -310,7 +332,6 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
 
     # draw equip button
     equipButtonRect = placeButton(DISPLAYSURF, font, 'equip', 470, 500)
-
 #    x = 50
 #    y = 100
 #    for item in pack.keys():
@@ -347,18 +368,24 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
     for event in pygame.event.get():
         if event.type == MOUSEBUTTONUP:
             x,y = event.pos
-            print str(x) + str(y)
+            #print str(x) + str(y)
             if pygame.Rect(x,y,1,1).colliderect(leftRect):
                 do = -1
             elif pygame.Rect(x,y,1,1).colliderect(rightRect):
                 do = -1
             elif pygame.Rect(x,y,1,1).colliderect(backButtonRect):
                 back = True
-            #elif pygame.Rect(x,y,1,1)
+            elif pygame.Rect(x,y,1,1).colliderect(sellButtonRect):
+                sell = pack.keys()[currentItem % len(pack.keys())]
+            elif pygame.Rect(x, y, 1, 1).colliderect(storeButtonRect):
+                screen = 'store'
+            elif pygame.Rect(x, y, 1, 1).colliderect(equipButtonRect):
+                weapon = pack.keys()[currentItem % len(pack.keys())]
+                print str(weapon)
         elif event.type == QUIT:
             pygame.quit()
             sys.exit()
-    return (do,back)
+    return (do,back,screen,weapon,sell)
 
 
 def readFile():

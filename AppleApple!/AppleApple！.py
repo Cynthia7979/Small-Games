@@ -527,11 +527,11 @@ def save(name,apple,appleTree,costPerTree,blood,pack):
     strPack = []
     for item in pack:
         if isinstance(item,Food):
-            itemStr = ' '.join(['Food',item.name,str(item.fullness),str(item.craftable),str(item.cost),str(item.recipe)])
+            itemStr = ' '.join(['Food',item.name,str(item.fullness),str(item.Craftable),str(item.cost),str(item.recipe)])
         elif isinstance(item,Weapon):
             itemStr = ' '.join(['Weapon',item.name,str(item.harm),str(item.cost),str(item.recipe)])
         elif isinstance(item,Material):
-            itemStr = ' '.join(['Material',item.name,str(item.Craftable),str(item.cost),item(item.recipe)])
+            itemStr = ' '.join(['Material',item.name,str(item.Craftable),str(item.cost),str(item.recipe)])
         strPack.append(itemStr)
     packStr = '\n'.join(strPack)
     statStr = '\n'.join((name,apple,appleTree,costPerTree,blood))

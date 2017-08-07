@@ -22,7 +22,7 @@ class Item(object):
         self.Craftable = isCraftable
         self.cost = cost
         self.recipe = recipe
-
+# TODO: change every type() or isinstance to: if item.isMaterial...
 
 class Weapon(Item):
     def __init__(self, itemName, harm, cost, recipe):
@@ -102,6 +102,7 @@ def main():
     pack = {}
     # load stats from file
     name, apple, appleTree, costPerTree, startBlood, thingsToAdd = readFile()
+    global name, apple, appleTree, costPerTree, startBlood, pack
     # add thing to pack
     for thing in thingsToAdd:
         if thing in pack.keys():
@@ -175,6 +176,10 @@ def main():
                         currentScreen = 'pack'
                     elif pygame.Rect(x,y,1,1).colliderect(appleImgRect): # clicked apple icon (to pick apple)
                         apple += pickApple(appleTree)
+                elif event.type == QUIT:
+                    save(name, apple, appleTree, costPerTree, startBlood, pack)
+                    pygame.quit()
+                    sys.exit()
         elif currentScreen == 'explore choose': # explore destination choosing screen
             thingReturned = exploreChoosingScreen(DISPLAYSURF,font,places)
             if thingReturned: # returned something
@@ -384,9 +389,11 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
             elif pygame.Rect(x, y, 1, 1).colliderect(equipButtonRect):
                 weapon = pack.keys()[currentItem % len(pack.keys())]
                 print str(weapon)
-        #elif event.type == QUIT:
-            #pygame.quit()
-            #sys.exit()
+        elif event.type == QUIT:
+            save(name, apple, appleTree, costPerTree, startBlood, pack)
+            pygame.quit()
+            sys.exit()
+
     return (do,back,screen,weapon,sell)
 
 
@@ -488,9 +495,10 @@ def exploreChoosingScreen(DISPLAYSURF,font,places):
                 if pygame.Rect(x,y,1,1).colliderect(placeRects[place][1]): # go to this place
                     return 'goto' + place
 
-        #elif event.type == QUIT:
-            #pygame.quit()
-            #sys.exit()
+        elif event.type == QUIT:
+            save(name, apple, appleTree, costPerTree, startBlood, pack)
+            pygame.quit()
+            sys.exit()
 
 
 def placeButton(surf, font, text, x, y):
@@ -519,11 +527,11 @@ def save(name,apple,appleTree,costPerTree,blood,pack):
     strPack = []
     for item in pack:
         if isinstance(item,Food):
-            itemStr = ' '.join(('Food',item.name,str(item.fullness),str(item.craftable),str(item.cost),str(item.recipe)))
+            itemStr = ' '.join(['Food',item.name,str(item.fullness),str(item.craftable),str(item.cost),str(item.recipe)])
         elif isinstance(item,Weapon):
-            itemStr = ' '.join(('Weapon',item.name,str(item.harm),str(item.cost),str(item.recipe)))
+            itemStr = ' '.join(['Weapon',item.name,str(item.harm),str(item.cost),str(item.recipe)])
         elif isinstance(item,Material):
-            itemStr = ' '.join(('Material',item.name,str(item.craftable),str(item.cost),item(item.recipe)))
+            itemStr = ' '.join(['Material',item.name,str(item.Craftable),str(item.cost),item(item.recipe)])
         strPack.append(itemStr)
     packStr = '\n'.join(strPack)
     statStr = '\n'.join((name,apple,appleTree,costPerTree,blood))

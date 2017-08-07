@@ -1,10 +1,7 @@
 Cynthia7979#usrname
-8910#apple
+8940#apple
 30#appleTree
 1#costPerTree
 20#blood
 
-Material wood True 3 ('(', ')')
-Material wood True 3 ('(', ')')
-Food egg 1 True 3 ('(', ')')
-Food flesh 2 True 1 ('(', ')')
+Material wood False 3 ()

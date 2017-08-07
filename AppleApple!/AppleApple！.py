@@ -215,7 +215,6 @@ def main():
                             else:
                                 pack[item] -= 1
                             currentItem += 1
-
         elif currentScreen[:5] == 'place': # exploring screen, working on
             DISPLAYSURF.fill(SKYBLUE)
             place = currentScreen[5:] # cut the place string
@@ -527,11 +526,23 @@ def save(name,apple,appleTree,costPerTree,blood,pack):
     strPack = []
     for item in pack:
         if isinstance(item,Food):
-            itemStr = ' '.join(['Food',item.name,str(item.fullness),str(item.Craftable),str(item.cost),str(item.recipe)])
+            if item.recipe == ():
+                recipe = '()'
+            else:
+                recipe = str(item.recipe)
+            itemStr = ' '.join(['Food',item.name,str(item.fullness),str(item.Craftable),str(item.cost),recipe])
         elif isinstance(item,Weapon):
-            itemStr = ' '.join(['Weapon',item.name,str(item.harm),str(item.cost),str(item.recipe)])
+            if item.recipe == ():
+                recipe = '()'
+            else:
+                recipe = str(item.recipe)
+            itemStr = ' '.join(['Weapon',item.name,str(item.harm),str(item.cost),recipe])
         elif isinstance(item,Material):
-            itemStr = ' '.join(['Material',item.name,str(item.Craftable),str(item.cost),str(item.recipe)])
+            if item.recipe == ():
+                recipe = '()'
+            else:
+                recipe = str(item.recipe)
+            itemStr = ' '.join(['Material',item.name,str(item.Craftable),str(item.cost),recipe])
         strPack.append(itemStr)
     packStr = '\n'.join(strPack)
     statStr = '\n'.join((name,apple,appleTree,costPerTree,blood))

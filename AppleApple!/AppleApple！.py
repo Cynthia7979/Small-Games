@@ -160,6 +160,11 @@ def main():
             packRect = pygame.Rect(670, 150, packTextRect.width, packTextRect.height)
             packTextRect.topleft = (670,150)
             DISPLAYSURF.blit(packTextSurf, packTextRect)
+            # apple farm text
+            farmTextSurf = font.render('This is ' + name + "'s apple farm", True, BLACK)
+            farmTextRect = farmTextSurf.get_rect()
+            farmTextRect.center = (400,50)
+            DISPLAYSURF.blit(farmTextSurf,farmTextRect)
             # event handling loop
             for event in pygame.event.get():
                 if event.type == MOUSEBUTTONUP:
@@ -170,9 +175,6 @@ def main():
                         currentScreen = 'pack'
                     elif pygame.Rect(x,y,1,1).colliderect(appleImgRect): # clicked apple icon (to pick apple)
                         apple += pickApple(appleTree)
-                elif event.type == QUIT:
-                    pygame.quit()
-                    sys.exit()
         elif currentScreen == 'explore choose': # explore destination choosing screen
             thingReturned = exploreChoosingScreen(DISPLAYSURF,font,places)
             if thingReturned: # returned something
@@ -194,7 +196,8 @@ def main():
             if screen:
                 currentScreen = screen
             if weapon:
-                weaponInUse = weapon
+                if isinstance(weapon,Weapon):
+                    weaponInUse = weapon
             if sell:
                 if len(pack.keys()) <= 1:
                     pass
@@ -271,14 +274,13 @@ def main():
         # event handling loop
         for event in pygame.event.get():
             if event.type == QUIT:
-                # TODO: save system
+                save(name,apple,appleTree,costPerTree,startBlood,pack)
                 pygame.quit()
                 sys.exit()
 
 
         CLOCK.tick(FPS)
         pygame.display.update() # update the window
-
 
 
 def packScreen(DISPLAYSURF,font,pack,currentItem):
@@ -382,9 +384,9 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
             elif pygame.Rect(x, y, 1, 1).colliderect(equipButtonRect):
                 weapon = pack.keys()[currentItem % len(pack.keys())]
                 print str(weapon)
-        elif event.type == QUIT:
-            pygame.quit()
-            sys.exit()
+        #elif event.type == QUIT:
+            #pygame.quit()
+            #sys.exit()
     return (do,back,screen,weapon,sell)
 
 
@@ -486,9 +488,10 @@ def exploreChoosingScreen(DISPLAYSURF,font,places):
                 if pygame.Rect(x,y,1,1).colliderect(placeRects[place][1]): # go to this place
                     return 'goto' + place
 
-        elif event.type == QUIT:
-            pygame.quit()
-            sys.exit()
+        #elif event.type == QUIT:
+            #pygame.quit()
+            #sys.exit()
+
 
 def placeButton(surf, font, text, x, y):
     # draw sell button
@@ -498,6 +501,38 @@ def placeButton(surf, font, text, x, y):
     textButtonRect.topleft = (x, y)
     surf.blit(textButtonSurf, textButtonRect)
     return buttonRect
+
+
+def save(name,apple,appleTree,costPerTree,blood,pack):
+    name = name + '#usrname'
+    apple = str(apple) + '#apple'
+    appleTree = str(appleTree) + '#appleTree'
+    costPerTree = str(costPerTree) + '#costPerTree'
+    blood = str(blood) + '#blood'
+    lstPack = []
+    for item in pack.keys():
+        if pack[item] == 1:
+            lstPack.append(item)
+        elif pack[item] > 1:
+            for i in range(pack[item]):
+                lstPack.append(item)
+    strPack = []
+    for item in pack:
+        if isinstance(item,Food):
+            itemStr = ' '.join(('Food',item.name,str(item.fullness),str(item.craftable),str(item.cost),str(item.recipe)))
+        elif isinstance(item,Weapon):
+            itemStr = ' '.join(('Weapon',item.name,str(item.harm),str(item.cost),str(item.recipe)))
+        elif isinstance(item,Material):
+            itemStr = ' '.join(('Material',item.name,str(item.craftable),str(item.cost),item(item.recipe)))
+        strPack.append(itemStr)
+    packStr = '\n'.join(strPack)
+    statStr = '\n'.join((name,apple,appleTree,costPerTree,blood))
+    finalStr = statStr + '\n\n' + packStr
+
+    f = open('.\UsrStat.txt','w')
+    f.write(finalStr)
+    f.close()
+    return
 
 if __name__ == '__main__':
     main()

@@ -11,7 +11,7 @@ NAVYBLUE = (0,0,128)
 SKYBLUE = (112,228,255)
 BLACK = (0,0,0)
 CLOCK = pygame.time.Clock()
-FPS = 30
+FPS = 20
 
 class Item(object):
     def __init__(self, itemName, isMaterial, isFood, isWeapon, isCraftable, cost, recipe=()):
@@ -94,7 +94,7 @@ diamond_sword = Weapon('diamond sword', 162, 110, (diamond, diamond, stick))
 better_wooden_sword = Weapon('better wooden sword', 10, 10, (wooden_sword, wooden_sword))  # and so on...
 
 # places
-placeToMobs = {'forest': (tree, tree, tree, tree, tree), 'farm': (cow, chicken, chicken, sheep)}
+placeToMobs = {'forest': (tree, tree, tree, tree, tree), 'farm': (tree, stone, tree, stone)}
 
 
 def main():
@@ -185,7 +185,7 @@ def main():
                     #currentScreen = 'main'
         elif currentScreen == 'pack': # pack viewing and managing screen
             do, back = packScreen(DISPLAYSURF,font,pack,currentItem) # to switch item or not and go back or not
-            if currentItem < len(pack)-1 and currentItem > -len(pack): # not out of range
+            if currentItem < len(pack)-1 and currentItem > -1 * (len(pack)): # not out of range
                 currentItem += do
             else:
                 currentItem = 0 # start over
@@ -226,24 +226,25 @@ def main():
             DISPLAYSURF.blit(mobBloodTextSurf,mobBloodTextRect)
             tipText = 'fighting with ' + mob.name
             mobBlood -= weaponInUse.harm
+            pygame.time.wait(500)
             playerBlood -= mob.damage
-            if playerBlood <= 0:
+            if playerBlood <= 0: # defeated
                 currentScreen = 'main'
-                playerBlood = 20
-            if mobBlood <= 0:
+                playerBlood = 0
+            if mobBlood <= 0: # this mob defeated
                 for trophie in mob.trophie:
-                    if mob.trophie in pack.keys():
-                        pack[mob.trophie] += 1
+                    if trophie in pack.keys():
+                        pack[trophie] += 1
                     else:
-                        pack[mob.trophie] = 1
+                        pack[trophie] = 1
                 del mobs[0]
-                for mob in mobs:
-                    print mob.name
-            if mobs == []:
+                #for mob in mobs:
+                    #print mob.name
+            if mobs == []: # victory
                 currentScreen = 'main'
-                playerBlood = startBlood
-            # TODO: fighting with mob and get things system
-
+            # FIXME: The blood of the mob will go under zero,
+            # FIXME: and the blood of mob won't reset, it will be negative if next fight started
+            # FIXME: The mob won't change?
 
         # draw apple bar
         DISPLAYSURF.blit(appleImg, (0, 0))
@@ -266,11 +267,13 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
     back = False # go back to home page?
 
     DISPLAYSURF.fill(WHITE)
+
     # draw 'Pack' title
     titleSurf = font.render('Pack',True,BLACK)
     titleRect = titleSurf.get_rect()
     titleRect.center = (400,50)
     DISPLAYSURF.blit(titleSurf,titleRect)
+
     # draw arrows
     leftArrow = pygame.image.load('./left.png')
     leftRect = leftArrow.get_rect()
@@ -280,12 +283,33 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
     rightRect.topleft = (600,250)
     DISPLAYSURF.blit(leftArrow,(100,250))
     DISPLAYSURF.blit(rightArrow,(600,250))
+
     # draw back button
-    backTextSurf = font.render('back', True, WHITE, NAVYBLUE)
-    backTextRect = backTextSurf.get_rect()
-    backButtonRect = pygame.Rect(700, 500, backTextRect.width, backTextRect.height)
-    backTextRect.topleft = (700, 500)
-    DISPLAYSURF.blit(backTextSurf, backTextRect)
+    #backTextSurf = font.render('back', True, WHITE, NAVYBLUE)
+    #backTextRect = backTextSurf.get_rect()
+    #backButtonRect = pygame.Rect(700, 500, backTextRect.width, backTextRect.height)
+    #backTextRect.topleft = (700, 500)
+    #DISPLAYSURF.blit(backTextSurf, backTextRect)\
+    backButtonRect = placeButton(DISPLAYSURF, font, 'back', 650, 500)
+
+    # draw sell button
+    #sellTextSurf = font.render('sell', True, WHITE, NAVYBLUE)
+    #sellTextRect = sellTextSurf.get_rect()
+    #sellButtonRect = pygame.Rect(420, 500, sellTextRect.width, sellTextRect.height)
+    #sellTextRect.topleft = (420, 500)
+    #DISPLAYSURF.blit(sellTextSurf, sellTextRect)
+    sellButtonRect = placeButton(DISPLAYSURF, font, 'sell', 110, 500)
+
+    # draw store button
+    #sellTextSurf = font.render('back', True, WHITE, NAVYBLUE)
+    #sellTextRect = sellTextSurf.get_rect()
+    #sellButtonRect = pygame.Rect(420, 500, storeTextRect.width, storeTextRect.height)
+    #sellTextRect.topleft = (420, 500)
+    #DISPLAYSURF.blit(storeTextSurf, storeTextRect)
+    storeButtonRect = placeButton(DISPLAYSURF, font, 'store', 310, 500)
+
+    # draw equip button
+    equipButtonRect = placeButton(DISPLAYSURF, font, 'equip', 470, 500)
 
 #    x = 50
 #    y = 100
@@ -301,6 +325,7 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
 #            y += 100
 #            x = 50
 #        DISPLAYSURF.blit(itemSurf,itemRect)
+
     itemNames = []
     for item in pack.keys():
         itemNames.append(item.name)
@@ -315,23 +340,26 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
         numRect.topleft = (500,250)
         itemTexts[itemName] = [itemSurf,itemRect,numSurf,numRect]
 # item surf;rect,number surf;rect
-    isurf,irect,nsurf,nrect = itemTexts[itemTexts.keys()[currentItem]] # change to current item name
+    isurf,irect,nsurf,nrect = itemTexts[itemNames[currentItem % len(itemNames)]] # change to current item name
     DISPLAYSURF.blit(isurf,irect)
+    DISPLAYSURF.blit(nsurf,nrect)
     # event handling loop
     for event in pygame.event.get():
         if event.type == MOUSEBUTTONUP:
             x,y = event.pos
+            print str(x) + str(y)
             if pygame.Rect(x,y,1,1).colliderect(leftRect):
                 do = -1
             elif pygame.Rect(x,y,1,1).colliderect(rightRect):
                 do = -1
             elif pygame.Rect(x,y,1,1).colliderect(backButtonRect):
                 back = True
+            #elif pygame.Rect(x,y,1,1)
         elif event.type == QUIT:
             pygame.quit()
             sys.exit()
     return (do,back)
-    # FIXME: if you only press left or right you may skip something...
+
 
 def readFile():
     f = open('.\UsrStat.txt')
@@ -434,6 +462,15 @@ def exploreChoosingScreen(DISPLAYSURF,font,places):
         elif event.type == QUIT:
             pygame.quit()
             sys.exit()
+
+def placeButton(surf, font, text, x, y):
+    # draw sell button
+    textButtonSurf = font.render(text, True, WHITE, NAVYBLUE)
+    textButtonRect = textButtonSurf.get_rect()
+    buttonRect = pygame.Rect(x, y, textButtonRect.width, textButtonRect.height)
+    textButtonRect.topleft = (x, y)
+    surf.blit(textButtonSurf, textButtonRect)
+    return buttonRect
 
 if __name__ == '__main__':
     main()

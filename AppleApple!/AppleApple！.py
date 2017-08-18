@@ -115,12 +115,15 @@ def main():
     pygame.display.set_caption('Apple Apple!')
     currentScreen = 'main'
     currentItem = 0
+    storeCurrentItem = 0
     weaponInUse = wooden_sword
     tipText = ''
     currentLand = 0
     mobBlood = None
     mobs = None
     playerBlood = startBlood
+    thingsCanBuy = [[berry,berry,milk,flour,wooden_sword]]
+    thingsNowOn = []
     # load images
     tree = pygame.image.load('./tree.png')
     font = pygame.font.Font('arial.ttf',32)
@@ -136,7 +139,7 @@ def main():
     appleImgRect.topleft = (0, 0)
 
     # main loop
-    while True:
+    while True: # TODO: make up saving system, 'plant tree' function
         # set apple bar
         appleTextSurface = font.render(':' + str(apple), True, BLACK)
         appleTextRect = appleTextSurface.get_rect()
@@ -268,8 +271,22 @@ def main():
             if mobs == []: # victory
                 currentScreen = 'main'
         elif currentScreen == 'store':
-            pass
-            # TODO: Store screen and buy system
+            if thingsNowOn == []:
+                thingsNowOn = random.choice(thingsCanBuy)
+            do,back,buy = storeScreen(DISPLAYSURF,font,thingsNowOn,storeCurrentItem,apple)
+            storeCurrentItem += do
+            if back:
+                currentScreen = 'pack'
+            if storeCurrentItem < 0:
+                storeCurrentItem = len(thingsNowOn) - 1
+            if buy:
+                if buyJustice(apple,buy):
+                    apple -= buy.cost
+                    if buy in pack.keys():
+                        pack[buy] += 1
+                    else:
+                        pack[buy] = 1
+            # FIXME: if you press back button, you will switch the item?
 
         # draw apple bar
         DISPLAYSURF.blit(appleImg, (0, 0))
@@ -395,6 +412,53 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
 
     return (do,back,screen,weapon,sell)
 
+def storeScreen(DISPLAYSURF, font, items, currentItem, apple): # TODO should I make packScreen() and storeScreen() together? They are too similar.
+    DISPLAYSURF.fill(WHITE)
+    currentItem %= len(items)
+    do = 0  # switch the item
+    back = False  # go back to home page?
+    buy = None # buy anything?
+    # draw 'Store' title
+    titleSurf = font.render('Store', True, BLACK)
+    titleRect = titleSurf.get_rect()
+    titleRect.center = (400, 50)
+    DISPLAYSURF.blit(titleSurf, titleRect)
+    # draw arrows
+    leftArrow = pygame.image.load('./left.png')
+    leftRect = leftArrow.get_rect()
+    leftRect.topleft = (100, 250)
+    rightArrow = pygame.image.load('./right.png')
+    rightRect = rightArrow.get_rect()
+    rightRect.topleft = (600, 250)
+    DISPLAYSURF.blit(leftArrow, (100, 250))
+    DISPLAYSURF.blit(rightArrow, (600, 250))
+    # back button
+    backButtonRect = placeButton(DISPLAYSURF, font, 'back', 650, 500)
+    # get item names
+    itemNames = []
+    for item in items:
+        itemNames.append(item.name)
+    # draw item name
+    itemNameSurf = font.render(itemNames[currentItem],True,BLACK)
+    itemNameRect = itemNameSurf.get_rect()
+    itemNameRect.center = (400,300)
+    DISPLAYSURF.blit(itemNameSurf,itemNameRect)
+    for event in pygame.event.get():
+        if event.type == MOUSEBUTTONUP:
+            x,y = event.pos
+            rect = pygame.Rect(1,1,x,y)
+            if rect.colliderect(leftRect):
+                do = -1
+            elif rect.colliderect(rightRect):
+                do = 1
+            elif rect.colliderect(backButtonRect):
+                back = True
+        elif event.type == QUIT:
+            pygame.quit()
+            sys.exit()
+
+
+    return do,back,buy
 
 def readFile():
     f = open('.\UsrStat.txt')

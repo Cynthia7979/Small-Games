@@ -1,4 +1,4 @@
-import pygame, random, sys
+import pygame, random, sys, pickle
 from pygame.locals import *
 
 costPerTree = 0
@@ -153,17 +153,11 @@ def main():
                 DISPLAYSURF.blit(tree, (x, 420))
                 x += 15
             # explore button
-            exploreTextSurf = font.render('explore', True, WHITE, NAVYBLUE)
-            exploreTextRect = exploreTextSurf.get_rect()
-            exploreRect = pygame.Rect(670, 80, exploreTextRect.width, exploreTextRect.height)
-            exploreTextRect.topleft = (670, 80)
-            DISPLAYSURF.blit(exploreTextSurf, exploreTextRect)
+            exploreRect = placeButton(DISPLAYSURF,font,'explore',670,80)
             # pack button
-            packTextSurf = font.render('pack', True, WHITE, NAVYBLUE)
-            packTextRect = exploreTextSurf.get_rect()
-            packRect = pygame.Rect(670, 150, packTextRect.width, packTextRect.height)
-            packTextRect.topleft = (670,150)
-            DISPLAYSURF.blit(packTextSurf, packTextRect)
+            packRect = placeButton(DISPLAYSURF,font,'pack',670,150)
+            # plant tree button
+            plantRect = placeButton(DISPLAYSURF,font,'plant tree',650,220)
             # apple farm text
             farmTextSurf = font.render('This is ' + name + "'s apple farm", True, BLACK)
             farmTextRect = farmTextSurf.get_rect()
@@ -179,6 +173,11 @@ def main():
                         currentScreen = 'pack'
                     elif pygame.Rect(x,y,1,1).colliderect(appleImgRect): # clicked apple icon (to pick apple)
                         apple += pickApple(appleTree)
+                    elif pygame.Rect(x,y,1,1).colliderect(plantRect):
+                        if appleTree < 50:
+                            appleTree += 1
+                            apple -= costPerTree
+                            costPerTree += 1
                 elif event.type == QUIT:
                     save(name, apple, appleTree, costPerTree, startBlood, pack)
                     pygame.quit()
@@ -474,21 +473,24 @@ def readFile():
                 s = s[:n]
             details.append(s)
             # print s
-    pack = []
-    stringedPack = details[5:]
-    for item in stringedPack:
-        stats = item.split(' ')
-        if stats[0] == 'Material':
-            if len(stats) < 5:
-                stats.append(())
-            addItem = Material(stats[1],bool(stats[2]),int(stats[3]),tuple(stats[4]))
-        elif stats[0] == 'Food':
-            if len(stats) < 6:
-                stats.append(())
-            addItem = Food(stats[1],int(stats[2]),bool(stats[3]),int(stats[4]),tuple(stats[5]))
-        elif stats[0] == 'Weapon':
-            addItem = Weapon(stats[1],int(stats[2]),int(stats[3]),tuple(stats[4]))
-        pack.append(addItem)
+
+    loadedPack = details[5]
+    pack = eval(loadedPack)
+    #serializedPack = details[5]
+    #lstedPack = pickle.loads(serializedPack)
+    #for item in stringedPack:
+    #    stats = item.split(' ')
+    #    if stats[0] == 'Material':
+    #        if len(stats) < 5:
+    #            stats.append(())
+    #        addItem = Material(stats[1],bool(stats[2]),int(stats[3]),tuple(stats[4]))
+    #    elif stats[0] == 'Food':
+    #        if len(stats) < 6:
+    #            stats.append(())
+    #        addItem = Food(stats[1],int(stats[2]),bool(stats[3]),int(stats[4]),tuple(stats[5]))
+    #    elif stats[0] == 'Weapon':
+    #        addItem = Weapon(stats[1],int(stats[2]),int(stats[3]),tuple(stats[4]))
+    #    pack.append(addItem)
 
 
     #       playername       apple       apple tree   apple cost per tree   start blood
@@ -587,28 +589,29 @@ def save(name,apple,appleTree,costPerTree,blood,pack):
         elif pack[item] > 1:
             for i in range(pack[item]):
                 lstPack.append(item)
-    strPack = []
-    for item in pack:
-        if isinstance(item,Food):
-            if item.recipe == ():
-                recipe = '()'
-            else:
-                recipe = str(item.recipe)
-            itemStr = ' '.join(['Food',item.name,str(item.fullness),str(item.Craftable),str(item.cost),recipe])
-        elif isinstance(item,Weapon):
-            if item.recipe == ():
-                recipe = '()'
-            else:
-                recipe = str(item.recipe)
-            itemStr = ' '.join(['Weapon',item.name,str(item.harm),str(item.cost),recipe])
-        elif isinstance(item,Material):
-            if item.recipe == ():
-                recipe = '()'
-            else:
-                recipe = str(item.recipe)
-            itemStr = ' '.join(['Material',item.name,str(item.Craftable),str(item.cost),recipe])
-        strPack.append(itemStr)
-    packStr = '\n'.join(strPack)
+    #serializedLstPack = pickle.dumps(lstPack)
+    #strPack = []
+    #for item in pack:
+    #    if isinstance(item,Food):
+    #        if item.recipe == ():
+    #            recipe = '()'
+    #       else:
+    #            recipe = str(item.recipe)
+    #        itemStr = ' '.join(['Food',item.name,str(item.fullness),str(item.Craftable),str(item.cost),recipe])
+    #    elif isinstance(item,Weapon):
+    #        if item.recipe == ():
+    #            recipe = '()'
+    #        else:
+    #            recipe = str(item.recipe)
+    #        itemStr = ' '.join(['Weapon',item.name,str(item.harm),str(item.cost),recipe])
+    #   elif isinstance(item,Material):
+    #       if item.recipe == ():
+    #            recipe = '()'
+    #        else:
+    #            recipe = str(item.recipe)
+    #        itemStr = ' '.join(['Material',item.name,str(item.Craftable),str(item.cost),recipe])
+    #    strPack.append(itemStr)
+    packStr = lstPack
     statStr = '\n'.join((name,apple,appleTree,costPerTree,blood))
     finalStr = statStr + '\n\n' + packStr
 

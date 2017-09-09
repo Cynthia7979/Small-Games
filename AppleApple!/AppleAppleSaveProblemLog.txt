@@ -1,0 +1,32 @@
+目前逻辑
+    将自定义类的实例直接存入文件，再用eval()格式化
+问题
+     Syntax error
+    实例无法直接进入列表。
+尝试解决方法
+    将列表序列化
+问题
+    EOFerror
+尝试解决办法
+    将背包数据存入另一个文件，用rb模式打开，wb模式写入
+问题
+    EOFerror
+尝试解决方法
+    用dump/load代替dumps/loads
+问题
+    EOFerror
+尝试解决方法
+    先用python程序把初始装备用wb方式写入pack.txt
+问题
+    TypeError
+    Traceback (most recent call last):
+  File "E:/SmallGames/Small-Games/AppleApple!/AppleApple??New.py", line 631, in <module>
+    main()
+  File "E:/SmallGames/Small-Games/AppleApple!/AppleApple??New.py", line 104, in main
+    name, apple, appleTree, costPerTree, startBlood, thingsToAdd = readFile()
+  File "E:/SmallGames/Small-Games/AppleApple!/AppleApple??New.py", line 559, in readFile
+    l_pack = pickle.loads(s_pack)
+  File "C:\Users\Cynthia7979\Anaconda2\envs\python2\lib\pickle.py", line 1387, in loads
+    file = StringIO(str)
+TypeError: StringIO() argument 1 must be string or buffer, not list
+    注意：我将整个列表序列化并作为字符串存入了pack.txt文件

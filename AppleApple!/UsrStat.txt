@@ -3,5 +3,3 @@ Cynthia7979#usrname
 50#appleTree
 1#costPerTree
 20#blood
-
-[<__main__.Item object at 0x000000000183F4E0>]

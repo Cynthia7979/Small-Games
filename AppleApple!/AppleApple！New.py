@@ -285,7 +285,6 @@ def main():
                         pack[buy] += 1
                     else:
                         pack[buy] = 1
-            # FIXME: if you press back button, you will switch the item?
 
         # draw apple bar
         DISPLAYSURF.blit(appleImg, (0, 0))
@@ -411,7 +410,8 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
 
     return (do,back,screen,weapon,sell)
 
-def storeScreen(DISPLAYSURF, font, items, currentItem, apple): # TODO should I make packScreen() and storeScreen() together? They are too similar.
+
+def storeScreen(DISPLAYSURF, font, items, currentItem, apple):
     DISPLAYSURF.fill(WHITE)
     currentItem %= len(items)
     do = 0  # switch the item
@@ -458,43 +458,6 @@ def storeScreen(DISPLAYSURF, font, items, currentItem, apple): # TODO should I m
 
 
     return do,back,buy
-
-def readFile():
-    f = open('.\UsrStat.txt')
-    texts = f.read()
-    category = texts.split('\n\n') # player stats and pack things
-    details = []
-    for part in category:
-        splited = part.split('\n')
-        for s in splited:
-            # print s
-            n = s.find('#')
-            if n != -1:
-                s = s[:n]
-            details.append(s)
-            # print s
-
-    loadedPack = details[5]
-    pack = eval(loadedPack)
-    #serializedPack = details[5]
-    #lstedPack = pickle.loads(serializedPack)
-    #for item in stringedPack:
-    #    stats = item.split(' ')
-    #    if stats[0] == 'Material':
-    #        if len(stats) < 5:
-    #            stats.append(())
-    #        addItem = Material(stats[1],bool(stats[2]),int(stats[3]),tuple(stats[4]))
-    #    elif stats[0] == 'Food':
-    #        if len(stats) < 6:
-    #            stats.append(())
-    #        addItem = Food(stats[1],int(stats[2]),bool(stats[3]),int(stats[4]),tuple(stats[5]))
-    #    elif stats[0] == 'Weapon':
-    #        addItem = Weapon(stats[1],int(stats[2]),int(stats[3]),tuple(stats[4]))
-    #    pack.append(addItem)
-
-
-    #       playername       apple       apple tree   apple cost per tree   start blood
-    return details[0], int(details[1]), int(details[2]), int(details[3]), int(details[4]), pack
 
 
 def pickApple(appleTree):
@@ -576,6 +539,48 @@ def placeButton(surf, font, text, x, y):
     return buttonRect
 
 
+def readFile():
+    f1 = open('.\UsrStat.txt')
+    texts = f1.read()
+    category = texts.split('\n\n') # player stats and pack things
+    details = []
+    for part in category:
+        splited = part.split('\n')
+        for s in splited: # remove annotations
+            # print s
+            n = s.find('#')
+            if n != -1:
+                s = s[:n]
+            details.append(s)
+            # print s
+    f1.close()
+    f2 = open('.\pack.txt','rb')
+    s_pack = pickle.load(f2)
+    l_pack = pickle.loads(s_pack)
+    f2.close()
+
+    #loadedPack = details[5]
+    #pack = eval(loadedPack)
+    lstedPack = pickle.loads(serializedPack)
+    #for item in stringedPack:
+    #    stats = item.split(' ')
+    #    if stats[0] == 'Material':
+    #        if len(stats) < 5:
+    #            stats.append(())
+    #        addItem = Material(stats[1],bool(stats[2]),int(stats[3]),tuple(stats[4]))
+    #    elif stats[0] == 'Food':
+    #        if len(stats) < 6:
+    #            stats.append(())
+    #        addItem = Food(stats[1],int(stats[2]),bool(stats[3]),int(stats[4]),tuple(stats[5]))
+    #    elif stats[0] == 'Weapon':
+    #        addItem = Weapon(stats[1],int(stats[2]),int(stats[3]),tuple(stats[4]))
+    #    pack.append(addItem)
+
+
+    #       playername       apple       apple tree   apple cost per tree   start blood
+    return details[0], int(details[1]), int(details[2]), int(details[3]), int(details[4]), l_pack
+
+
 def save(name,apple,appleTree,costPerTree,blood,pack):
     name = name + '#usrname'
     apple = str(apple) + '#apple'
@@ -589,7 +594,6 @@ def save(name,apple,appleTree,costPerTree,blood,pack):
         elif pack[item] > 1:
             for i in range(pack[item]):
                 lstPack.append(item)
-    #serializedLstPack = pickle.dumps(lstPack)
     #strPack = []
     #for item in pack:
     #    if isinstance(item,Food):
@@ -611,14 +615,17 @@ def save(name,apple,appleTree,costPerTree,blood,pack):
     #            recipe = str(item.recipe)
     #        itemStr = ' '.join(['Material',item.name,str(item.Craftable),str(item.cost),recipe])
     #    strPack.append(itemStr)
-    packStr = lstPack
+    packStr = str(serializedLstPack)
     statStr = '\n'.join((name,apple,appleTree,costPerTree,blood))
-    finalStr = statStr + '\n\n' + packStr
 
-    f = open('.\UsrStat.txt','w')
-    f.write(finalStr)
-    f.close()
+    f1 = open('.\UsrStat.txt','w')
+    f1.write(statStr)
+    f1.close()
+    f2 = open('.\pack.txt','wb')
+    pickle.dump(lstPack,f2)
+    f2.close()
     return
+
 
 if __name__ == '__main__':
     main()

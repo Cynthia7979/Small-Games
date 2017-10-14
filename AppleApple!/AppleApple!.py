@@ -42,18 +42,12 @@ class Material(Item):
     def __init__(self, itemName, isCraftable, cost, recipe=()):
         super(Material,self).__init__(itemName, True, False, False, isCraftable, cost, recipe)
 
-
 class Mob(object):
     def __init__(self, name, blood, damage, trophies):
         self.blood = blood
         self.damage = damage
         self.trophie = trophies
         self.name = name
-
-# class Tool(Item):
-#    def __init__(self,):
-# Coming "soon"!!
-
 
 # item initalizing
 # materials
@@ -137,6 +131,9 @@ def main():
     appleImg = pygame.image.load('./apple.png')
     appleImgRect = appleImg.get_rect()
     appleImgRect.topleft = (0, 0)
+    #appleIcon = pygame.image.load('./apple.ico')
+    #pygame.display.set_icon(appleIcon)
+    # somehow the icon is broken..
 
     # main loop
     while True:
@@ -177,7 +174,8 @@ def main():
                         if appleTree < 50 and plantTreeJustice(1,apple):
                             appleTree += 1
                             apple -= costPerTree
-                            costPerTree * 1.2
+                            costPerTree *= 1.2
+                            costPerTree = int(costPerTree)
                 elif event.type == QUIT:
                     save(name, apple, appleTree, costPerTree, startBlood, pack)
                     pygame.quit()
@@ -214,9 +212,9 @@ def main():
                             apple += item.cost
                             if pack[item] == 1:
                                 del pack[item]
+                                currentItem += 1
                             else:
                                 pack[item] -= 1
-                            currentItem += 1
         elif currentScreen[:5] == 'place': # exploring screen, working on
             DISPLAYSURF.fill(SKYBLUE)
             place = currentScreen[5:] # cut the place string
@@ -341,7 +339,7 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
     #sellButtonRect = pygame.Rect(420, 500, sellTextRect.width, sellTextRect.height)
     #sellTextRect.topleft = (420, 500)
     #DISPLAYSURF.blit(sellTextSurf, sellTextRect)
-    sellButtonRect = placeButton(DISPLAYSURF, font, 'sell', 110, 500)
+    sellButtonRect = placeButton(DISPLAYSURF, font, 'sell', 500, 500)
 
     # draw store button
     #sellTextSurf = font.render('back', True, WHITE, NAVYBLUE)
@@ -349,10 +347,13 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
     #sellButtonRect = pygame.Rect(420, 500, storeTextRect.width, storeTextRect.height)
     #sellTextRect.topleft = (420, 500)
     #DISPLAYSURF.blit(storeTextSurf, storeTextRect)
-    storeButtonRect = placeButton(DISPLAYSURF, font, 'store', 310, 500)
+    storeButtonRect = placeButton(DISPLAYSURF, font, 'store', 350, 500)
 
     # draw equip button
-    equipButtonRect = placeButton(DISPLAYSURF, font, 'equip', 470, 500)
+    equipButtonRect = placeButton(DISPLAYSURF, font, 'equip', 200, 500)
+
+    # draw craft button
+    craftButtonRect = placeButton(DISPLAYSURF,font,'craft', 50, 500)
 #    x = 50
 #    y = 100
 #    for item in pack.keys():
@@ -402,7 +403,9 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
                 screen = 'store'
             elif pygame.Rect(x, y, 1, 1).colliderect(equipButtonRect):
                 weapon = pack.keys()[currentItem % len(pack.keys())]
-                print str(weapon)
+                #print str(weapon)
+            elif pygame.Rect(x,y,1,1).colliderect(craftButtonRect):
+                screen = 'craft'
         elif event.type == QUIT:
             save(name, apple, appleTree, costPerTree, startBlood, pack)
             pygame.quit()
@@ -433,6 +436,8 @@ def storeScreen(DISPLAYSURF, font, items, currentItem, apple):
     DISPLAYSURF.blit(rightArrow, (600, 250))
     # back button
     backButtonRect = placeButton(DISPLAYSURF, font, 'back', 650, 500)
+    # buy button
+    buyButtonRect = placeButton(DISPLAYSURF,font,'BUY!',110,500)
     # get item names
     itemNames = []
     for item in items:
@@ -452,6 +457,8 @@ def storeScreen(DISPLAYSURF, font, items, currentItem, apple):
                 do = 1
             elif rect.colliderect(backButtonRect):
                 back = True
+            elif rect.colliderect(buyButtonRect):
+                buy = items[currentItem]
         elif event.type == QUIT:
             pygame.quit()
             sys.exit()
@@ -459,6 +466,54 @@ def storeScreen(DISPLAYSURF, font, items, currentItem, apple):
 
     return do,back,buy
 
+
+def exploreChoosingScreen(DISPLAYSURF, font, places):
+    DISPLAYSURF.fill(WHITE)
+    # set question texts
+    questionSurf = font.render('Please choose the place to go', True, BLACK)
+    questionRect = questionSurf.get_rect()
+    questionRect.center = (400, 50)
+    DISPLAYSURF.blit(questionSurf, questionRect)
+    # set back button
+    backTextSurf = font.render('back', True, WHITE, NAVYBLUE)
+    backTextRect = backTextSurf.get_rect()
+    backButtonRect = pygame.Rect(700, 500, backTextRect.width, backTextRect.height)
+    backTextRect.topleft = (700, 500)
+    DISPLAYSURF.blit(backTextSurf, backTextRect)
+    # initalize x and y
+    x = 50
+    y = 100
+    placeRects = {}
+    for place in places.keys():
+        # set place image
+        placeSurf = places[place]
+        placeRect = placeSurf.get_rect()
+        placeRect.topleft = (x, y)
+        placeRects[place] = ((placeSurf, placeRect))
+        DISPLAYSURF.blit(placeSurf, placeRect)
+        x += 150
+        if x >= 800:
+            y += 150
+            x = 50
+    # event handling loop
+    for event in pygame.event.get():
+        if event.type == MOUSEBUTTONUP:
+            x, y = event.pos
+            if pygame.Rect(x, y, 1, 1).colliderect(backButtonRect):  # back button
+                # print 'back!'
+                return 'main'
+            for place in placeRects.keys():
+                if pygame.Rect(x, y, 1, 1).colliderect(placeRects[place][1]):  # go to this place
+                    return 'goto' + place
+
+        elif event.type == QUIT:
+            save(name, apple, appleTree, costPerTree, startBlood, pack)
+            pygame.quit()
+            sys.exit()
+
+
+def craftingScreen(DISPLAYSURF, font, pack):
+    pass
 
 def pickApple(appleTree):
     tuple = (False, False, True) # percent to have extra apple
@@ -482,51 +537,6 @@ def plantTreeJustice(num, apple):
         return True
     else:
         return False
-
-
-def exploreChoosingScreen(DISPLAYSURF,font,places):
-    DISPLAYSURF.fill(WHITE)
-    # set question texts
-    questionSurf = font.render('Please choose the place to go', True, BLACK)
-    questionRect = questionSurf.get_rect()
-    questionRect.center = (400, 50)
-    DISPLAYSURF.blit(questionSurf, questionRect)
-    # set back button
-    backTextSurf = font.render('back', True, WHITE, NAVYBLUE)
-    backTextRect = backTextSurf.get_rect()
-    backButtonRect = pygame.Rect(700, 500, backTextRect.width, backTextRect.height)
-    backTextRect.topleft = (700, 500)
-    DISPLAYSURF.blit(backTextSurf, backTextRect)
-    # initalize x and y
-    x = 50
-    y = 100
-    placeRects = {}
-    for place in places.keys():
-        # set place image
-        placeSurf = places[place]
-        placeRect = placeSurf.get_rect()
-        placeRect.topleft = (x,y)
-        placeRects[place] = ((placeSurf,placeRect))
-        DISPLAYSURF.blit(placeSurf,placeRect)
-        x += 150
-        if x >= 800:
-            y += 150
-            x = 50
-    # event handling loop
-    for event in pygame.event.get():
-        if event.type == MOUSEBUTTONUP:
-            x,y = event.pos
-            if pygame.Rect(x,y,1,1).colliderect(backButtonRect): # back button
-                #print 'back!'
-                return 'main'
-            for place in placeRects.keys():
-                if pygame.Rect(x,y,1,1).colliderect(placeRects[place][1]): # go to this place
-                    return 'goto' + place
-
-        elif event.type == QUIT:
-            save(name, apple, appleTree, costPerTree, startBlood, pack)
-            pygame.quit()
-            sys.exit()
 
 
 def placeButton(surf, font, text, x, y):

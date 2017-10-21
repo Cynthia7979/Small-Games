@@ -1,4 +1,4 @@
-import random, re
+import random,time
 R = 'rock'
 P = 'paper'
 S = 'sissors'
@@ -105,6 +105,7 @@ def rungame(data,player):
             usualPlay = analysize(playData)
             dataConfig(player,level,usualPlay)
             roundNo = 0
+            time.sleep(10)
 
 def analysize(data):
     dic = {}

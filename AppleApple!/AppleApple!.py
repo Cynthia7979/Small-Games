@@ -14,21 +14,29 @@ CLOCK = pygame.time.Clock()
 FPS = 20
 
 class Item(object):
-    def __init__(self, itemName, isMaterial, isFood, isWeapon, isCraftable, cost, recipe=()):
+    def __init__(self, itemName, cost, recipe=()):
         self.name = str(itemName)
-        self.isMaterial = isMaterial
-        self.isFood = isFood
-        self.isWeapon = isWeapon
-        self.Craftable = isCraftable
-        self.cost = cost
+        self.kind = 'Basic'
         self.recipe = recipe
-# TODO: change every type() or isinstance to: if item.isMaterial...
+        if recipe == (): self.craftable = False
+        elif recipe != (): self.craftable = True
+        self.cost = cost
+
+    def __str__(self):
+        return '<{name}, {kind} item object>'.format(name=self.name, kind=self.kind)
+    def unstr(self,s):
+        """Argument 'self' needs to be a raw item object without any modification"""
+        # TODO: It might be a good idea to make a unstr function
+        self.name = s[1:s.find(',')] # Cut name from string of an item object
 
 class Weapon(Item):
-    def __init__(self, itemName, harm, cost, recipe):
-        super(Weapon, self).__init__(itemName, False, False, True, True, cost, recipe)  # all weapons are craftable
+    def __init__(self, itemName, harm, cost, recipe=()):
+        super(Weapon, self).__init__(itemName, cost, recipe)  # all weapons are craftable
         self.harm = harm
+        self.kind = 'Weapon'
 
+    def __str__(self):
+        pass
 
 class Food(Item):
     def __init__(self, itemName, fullness, craftable, cost,recipe=(), isPotion=False, potionType=None, useDegree=None):
@@ -512,7 +520,7 @@ def exploreChoosingScreen(DISPLAYSURF, font, places):
             sys.exit()
 
 
-def craftingScreen(DISPLAYSURF, font, pack):
+def craftingScreen(DISPLAYSURF, font, pack): # TODO: craft screen
     pass
 
 def pickApple(appleTree):

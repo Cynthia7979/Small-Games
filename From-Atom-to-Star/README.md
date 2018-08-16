@@ -1,13 +1,6 @@
-hello!
-
-```flow
-st=>start: Start
-e=>end:End
-op1=>operation: My Operation
-sub1=>subroutine: My Subroutine
-cond=>condition: Yes or No?
-io=>inputoutput: catch
-st->op1->cond
-cond(yes)->io->e
-cond(no)->sub1(right)->op1
+```
+graph TB
+A[hello]--B[world]
+B --> C{Hehe}
+C --> D{aaa}
 ```

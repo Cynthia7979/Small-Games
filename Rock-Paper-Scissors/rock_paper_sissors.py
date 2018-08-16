@@ -1,113 +1,120 @@
-import random,time
+import random
+import time
 R = 'rock'
 P = 'paper'
-S = 'sissors'
+S = 'scissors'
 PASSWORD = 0
 LEVEL = 1
-USUALPLAY =2
-WINNUM = 3
-MATCH = {R:P,P:S,S:R}
+usual_play = 2
+WIN_NUM = 3
+MATCH = {R: P, P: S, S: R}
 
-def play(lastPlay=None,playerLv=0):
-    if lastPlay == None:
-        play = random.choice((R,P,S))
+
+def play(last_play=None, player_lv=0):
+    if last_play is None:
+        play_ = random.choice((R, P, S))
+        plays = ()
     else:
-        firstPlay = connect(lastPlay)
-        secondPlay = connect(firstPlay)
-        thirdPlay = connect(secondPlay)
-        plays = (firstPlay,secondPlay,thirdPlay)
-        autualPlay = int(playerLv) + 1
-        while autualPlay >= len(plays):
-            autualPlay -= 1
-        play = plays[autualPlay]
-    return play,plays
+        first_play = connect(last_play)
+        second_play = connect(first_play)
+        third_play = connect(second_play)
+        plays = (first_play, second_play, third_play)
+        actual_play = int(player_lv) + 1
+        while actual_play >= len(plays):
+            actual_play -= 1
+        play_ = plays[actual_play]
+    return play_, plays
 
-def connect(play):
-    return MATCH[play]
+
+def connect(play_):
+    return MATCH[play_]
+
 
 def main():
-    playersData = readFile('data')
-    for player in playersData.keys():
-        if playersData[player][LEVEL] == '':
-            playersData[player][LEVEL] = 0
-        if playersData[player][USUALPLAY] == '':
-            playersData[player][USUALPLAY] = R
+    players_data = read_file('data')
+    for player in players_data.keys():
+        if players_data[player][LEVEL] == '':
+            players_data[player][LEVEL] = 0
+        if players_data[player][usual_play] == '':
+            players_data[player][usual_play] = R
     while True:
         player = raw_input('please enter your username:')
-        if player not in playersData.keys():
-            print 'you are a new player, please enter your password'
+        if player not in players_data.keys():
+            print('you are a new player, please enter your password')
             psw = raw_input('>')
-            print ' please wait...'
-            addPlayer(player,psw)
-            print 'added player ' + player
-            print 'please log in again, your password is ' + psw
+            print(' please wait...')
+            add_player(player,psw)
+            print('added player ' + player)
+            print('please log in again, your password is ' + psw)
             break
         psw = ''
-        while psw != playersData[player][PASSWORD]:
+        while psw != players_data[player][PASSWORD]:
             psw = raw_input('please enter password(enter exit to exit):')
             if psw == 'exit':
                 break
-        if psw == playersData[player][PASSWORD]:
-            rungame(playersData[player],player)
+        if psw == players_data[player][PASSWORD]:
+            rungame(players_data[player],player)
 
-def addPlayer(username,password):
+
+def add_player(username,password):
     f = open('.\playerData.txt','a')
     f.write('\n\n'+username+'\n'+password)
     f.close()
 
-def rungame(data,player):
-    print 'hello, '+ player + ', welcome to the rock paper sissors game'
-    print '--don t mind sissors'
-    print 'as the rule said, i must deal before you'
-    print 'now lets start'
-    winNo = 0
-    loseNo = 0
-    playData = []
-    levelData = []
-    roundNo = 0
+
+def rungame(data, player):
+    print('hello, ' + player + ', welcome to the rock paper scissors game')
+    print('as the rule said, i must deal before you')
+    print('now lets start')
+    win_no = 0
+    lose_no = 0
+    play_data = []
+    level_data = []
+    round_no = 0
     level = data[LEVEL]
-    #very first round
-    computerPlay = data[USUALPLAY]
-    print 'im ready'
-    playerPlay = raw_input('(rock,paper,sissors):')
-    playData.append(playerPlay)
-    result = justice(computerPlay, playerPlay)
-    print 'computer ' + computerPlay + ', player ' + playerPlay
-    print result
+    # very first round
+    computer_play = data[2]
+    print('im ready')
+    player_play = raw_input('(rock,paper,sissors):')
+    play_data.append(player_play)
+    result = justice(computer_play, player_play)
+    print('computer ' + computer_play + ', player ' + player_play)
+    print(result)
     if result == 'computer win':
-        winNo += 1
+        win_no += 1
     elif result == 'player win':
-        loseNo += 1
+        lose_no += 1
     while True:
-        lastPlay = playerPlay
-        computerPlay,plays = play(lastPlay,level)
-        print 'im ready'
-        playerPlay = raw_input('(rock,paper,sissors,exit):')
-        if playerPlay == 'exit':
-            level = analysize(levelData)
-            usualPlay = analysize(playData)
-            dataConfig(player,level,usualPlay)
-            print 'ok, see you next time, ' + player + '.'
+        last_play = player_play
+        computer_play,plays = play(last_play, level)
+        print('im ready')
+        player_play = raw_input('(rock,paper,sissors,exit):')
+        if player_play == 'exit':
+            level = analyze(level_data)
+            usual_play = analyze(play_data)
+            data_config(player, level, usual_play)
+            print('ok, see you next time, ' + player + '.')
             break
-        playData.append(playerPlay)
-        result = justice(computerPlay, playerPlay)
-        print 'computer ' + computerPlay + ', player ' + playerPlay
-        print result
+        play_data.append(player_play)
+        result = justice(computer_play, player_play)
+        print('computer ' + computer_play + ', player ' + player_play)
+        print(result)
         if result == 'computer win':
-            winNo += 1
+            win_no += 1
         elif result == 'player win':
-            loseNo += 1
-        levelData.append(plays.index(playerPlay))
-        roundNo += 1
-        if roundNo >= 5:
-            print 'please wait , saving...'
-            level = analysize(levelData)
-            usualPlay = analysize(playData)
-            dataConfig(player,level,usualPlay)
-            roundNo = 0
+            lose_no += 1
+        level_data.append(plays.index(player_play))
+        round_no += 1
+        if round_no >= 5:
+            print('please wait , saving...')
+            level = analyze(level_data)
+            usual_play = analyze(play_data)
+            data_config(player, level, usual_play)
+            round_no = 0
             time.sleep(10)
 
-def analysize(data):
+
+def analyze(data):
     dic = {}
     lst = []
     for d in data:
@@ -119,59 +126,43 @@ def analysize(data):
     for i in lst:
         out.append(dic[i])
     return out[0]
-#    lst = []
-#    biggest = 0
-#    for i in diclst:
-#        if i[1] > biggest:
-#            biggest = i[1]
-#        else:
 
-def readFile(mode):
+
+def read_file(mode):
     if mode == 'data':
         f = open('.\playerData.txt')
         txt = f.read()
         lst = txt.split('\n\n')
-        dataLst = []
-        playerData = {}
+        data_lst = []
+        player_data = {}
         for p in lst:
-            dataLst.append(p.split('\n'))
-        for data in dataLst:
+            data_lst.append(p.split('\n'))
+        for data in data_lst:
             other = data[1:]
             while len(other) < 3:
                 other.append('')
-#                if len(other) == 2:
-#                    other.append('0')
-#                elif len(other) == 3:
-#                    other.append(random.choice((R,P,S)))
-            playerData[data[0]] = other
+            player_data[data[0]] = other
         f.close()
-        return playerData
+        return player_data
 
-def dataConfig(username,lv,uslPlay):
-#    import re
-#    fp3 = open(".\playerData.txt", "r+")
-#    for s in fp3.readlines():
-#        s = s.replace(prelv,lv)
-#        s = s.replace(preuslPlay,uslPlay)
-#        fp3.write(s)
-#    fp3.close()
-#    strOne = []
-#    strTwo = ''
-#    for i in playerData:
-    data = readFile('data')
+
+def data_config(username, lv, usl_play):
+    data = read_file('data')
     data[username][LEVEL] = lv
-    data[username][USUALPLAY] = uslPlay
+    data[username][usual_play] = usl_play
     s = []
     for user in data.keys():
-        s1 = user + '\n' + str(data[user][PASSWORD]) + '\n' + str(data[user][LEVEL]) + '\n' + str(data[user][USUALPLAY]) + '\n\n'
+        s1 = user + '\n' + str(data[user][PASSWORD]) + '\n' + str(data[user][LEVEL]) + '\n' \
+             + str(data[user][usual_play]) + '\n\n'
         s.append(s1)
-    s[-1] = s[-1].replace('\n\n','')
-    f = open('.\playerData.txt','w')
+    s[-1] = s[-1].replace('\n\n', '')
+    f = open('.\playerData.txt', 'w')
     s = ''.join(s)
     f.write(s)
     f.close()
 
-def justice(pc,user):
+
+def justice(pc, user):
     if pc == user:
         return 'tie'
     elif pc == MATCH[user]:

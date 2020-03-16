@@ -2,7 +2,7 @@ import random
 import time
 R = 'rock'
 P = 'paper'
-S = 'scissors'
+S = 'sissors'
 PASSWORD = 0
 LEVEL = 1
 usual_play = 2
@@ -38,10 +38,10 @@ def main():
         if players_data[player][usual_play] == '':
             players_data[player][usual_play] = R
     while True:
-        player = raw_input('please enter your username:')
+        player = input('please enter your username:')
         if player not in players_data.keys():
             print('you are a new player, please enter your password')
-            psw = raw_input('>')
+            psw = input('>')
             print(' please wait...')
             add_player(player,psw)
             print('added player ' + player)
@@ -49,7 +49,7 @@ def main():
             break
         psw = ''
         while psw != players_data[player][PASSWORD]:
-            psw = raw_input('please enter password(enter exit to exit):')
+            psw = input('please enter password(enter exit to exit):')
             if psw == 'exit':
                 break
         if psw == players_data[player][PASSWORD]:
@@ -75,7 +75,7 @@ def rungame(data, player):
     # very first round
     computer_play = data[2]
     print('im ready')
-    player_play = raw_input('(rock,paper,sissors):')
+    player_play = input('(rock,paper,sissors):')
     play_data.append(player_play)
     result = justice(computer_play, player_play)
     print('computer ' + computer_play + ', player ' + player_play)
@@ -88,7 +88,7 @@ def rungame(data, player):
         last_play = player_play
         computer_play,plays = play(last_play, level)
         print('im ready')
-        player_play = raw_input('(rock,paper,sissors,exit):')
+        player_play = input('(rock,paper,sissors,exit):')
         if player_play == 'exit':
             level = analyze(level_data)
             usual_play = analyze(play_data)

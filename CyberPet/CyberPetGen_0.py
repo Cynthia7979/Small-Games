@@ -2,6 +2,20 @@ import pygame
 import sys, os
 import math
 import random
+import time
+from ctypes import windll, Structure, c_long, byref #windows only
+
+
+class RECT(Structure):
+    _fields_ = [
+    ('left',    c_long),
+    ('top',     c_long),
+    ('right',   c_long),
+    ('bottom',  c_long),
+    ]
+    def width(self):  return self.right  - self.left
+    def height(self): return self.bottom - self.top
+
 
 WIDTH, HEIGHT = 480, 360
 FPS = 60
@@ -32,29 +46,31 @@ def main():
     DISPLAY = pygame.display.set_mode((WIDTH, HEIGHT))
     CLOCK = pygame.time.Clock()
     update_sequence = [[]]
-    status = {'blinking': False}
+    status = {'blinking': False,
+              'last_blink': time.time()}
 
-    eye1rect = pygame.Rect((185, 110, 25, 100))
-    eye2rect = pygame.Rect((265, 110, 25, 100))
+    eye1rect = pygame.Rect((192, 110, 25, 100))
+    eye2rect = pygame.Rect((263, 110, 25, 100))
     pygame.display.set_caption("CyberPet Gen.0")
     pygame.display.set_icon(image('icon.png'))
     while True:  # Game Loop
         # if update_sequence: print(update_sequence)
         DISPLAY.fill(GREY)
+        onTop(pygame.display.get_wm_info()['window'])
         face_rect = draw_face(DISPLAY)
         do_next()
         if not status['blinking']:
             draw_eyes(DISPLAY, eye1rect, eye2rect, BLACK)
+            if random.randint(0, 1000) + \
+                    (int(time.time()-status['last_blink'])) >= 1000:
+                random_blink(DISPLAY, eye1rect, eye2rect, 8)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.display.quit()
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONUP:
-                if random.randint(0,1) == 0:
-                    blink_twice(DISPLAY, eye1rect, eye2rect, 8)
-                else:
-                    blink(DISPLAY, eye1rect, eye2rect, 8)
+                random_blink(DISPLAY, eye1rect, eye2rect, 8)
         pygame.display.flip()
         CLOCK.tick(FPS)
 
@@ -101,10 +117,10 @@ def blink(surface, eye1rect, eye2rect, speed, offset=0):
     eye1rect_new, eye2rect_new = eye1rect.copy(), eye2rect.copy()
     init_w1, init_h1 = eye1rect_new.size
     init_w2, init_h2 = eye2rect_new.size
-    add_action(Action(modify_status, 'blinking', True), offset)
+    add_action(Action(update_status, 'blinking', True), offset)
     for i in range(0, int(240/speed)):
         height_multiplier = math.sqrt(abs((i/120*speed)-1))  # y = √|x-1|, x∈[0,2]
-        width_multiplier = -0.125*i/120 * (i/60-4) + 1  # y = -0.0625x(x-4)+1, x∈[0,4]
+        width_multiplier = -0.125*i/120 * (i/60-4) + 1  # y = -0.125x(x-4)+1, x∈[0,4]
         add_action(Action(draw_eyes, surface, eye1rect_new, eye2rect_new, BLACK), i+offset)
         # Shapeshift the eyes
         eye1rect_new, eye2rect_new = eye1rect_new.copy(), eye2rect_new.copy()
@@ -113,20 +129,36 @@ def blink(surface, eye1rect, eye2rect, speed, offset=0):
         eye1rect_new.width, eye2rect_new.width = \
             init_w1*width_multiplier, init_w2*width_multiplier
         eye1rect_new.center, eye2rect_new.center = center1, center2
-        print(eye1rect_new.height, eye2rect_new.height)
-    add_action(Action(modify_status, 'blinking', False), int(240/speed)+offset)
+        # print(eye1rect_new.height, eye2rect_new.height)
+    add_action(Action(update_status, 'blinking', False), int(240 / speed) + offset)
 
 
 def blink_twice(surface, eye1rect, eye2rect, speed):
     blink(surface, eye1rect, eye2rect, speed)
     blink(surface, eye1rect, eye2rect, speed, offset=int(240/speed)+random.randint(1,30))
-    print('blink twice added')
-    print(update_sequence)
+    # print('blink twice added')
+    # print(update_sequence)
 
 
-def modify_status(key, value):
+def update_status(key, value):
     status[key] = value
     return key, value
+
+
+def random_blink(surface, eye1rect, eye2rect, speed):
+    if random.randint(0, 1) == 0:
+        blink_twice(surface, eye1rect, eye2rect, speed)
+    else:
+        blink(surface, eye1rect, eye2rect, speed)
+    update_status('last_blink', time.time())
+
+
+def onTop(window):
+    SetWindowPos = windll.user32.SetWindowPos
+    GetWindowRect = windll.user32.GetWindowRect
+    rc = RECT()
+    GetWindowRect(window, byref(rc))
+    SetWindowPos(window, -1, rc.left, rc.top, 0, 0, 0x0001)
 
 
 if __name__ == '__main__':

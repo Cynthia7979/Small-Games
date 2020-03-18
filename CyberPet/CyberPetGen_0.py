@@ -49,8 +49,8 @@ def main():
     status = {'blinking': False,
               'last_blink': time.time()}
 
-    eye1rect = pygame.Rect((192, 110, 25, 100))
-    eye2rect = pygame.Rect((263, 110, 25, 100))
+    eye1rect = pygame.Rect((194, 110, 25, 98))
+    eye2rect = pygame.Rect((263, 110, 25, 98))
     pygame.display.set_caption("CyberPet Gen.0")
     pygame.display.set_icon(image('icon.png'))
     while True:  # Game Loop
@@ -70,7 +70,8 @@ def main():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONUP:
-                random_blink(DISPLAY, eye1rect, eye2rect, 8)
+                if not status['blinking']:
+                    random_blink(DISPLAY, eye1rect, eye2rect, 8)
         pygame.display.flip()
         CLOCK.tick(FPS)
 

@@ -3,7 +3,9 @@ import sys, os
 import math
 import random
 import time
-from ctypes import windll, Structure, c_long, byref #windows only
+import tkinter as tk
+import chat_module
+from ctypes import windll, Structure, c_long, byref  # Keep on top
 
 
 class RECT(Structure):
@@ -42,15 +44,18 @@ def main():
     global DISPLAY, CLOCK, update_sequence, status
 
     pygame.init()
+    pygame.font.init()
+    chat_module.init()
 
     DISPLAY = pygame.display.set_mode((WIDTH, HEIGHT))
     CLOCK = pygame.time.Clock()
     update_sequence = [[]]
     status = {'blinking': False,
-              'last_blink': time.time()}
+              'last_blink': time.time(),
+              'label': ''}
 
-    eye1rect = pygame.Rect((194, 110, 25, 98))
-    eye2rect = pygame.Rect((263, 110, 25, 98))
+    normaleye1rect = pygame.Rect((194, 110, 25, 98))
+    normaleye2rect = pygame.Rect((263, 110, 25, 98))  # TODO: Change this to relative position
     pygame.display.set_caption("CyberPet Gen.0")
     pygame.display.set_icon(image('icon.png'))
     while True:  # Game Loop
@@ -58,20 +63,25 @@ def main():
         DISPLAY.fill(GREY)
         onTop(pygame.display.get_wm_info()['window'])
         face_rect = draw_face(DISPLAY)
+        draw_label(DISPLAY, status['label'], WHITE)
         do_next()
         if not status['blinking']:
-            draw_eyes(DISPLAY, eye1rect, eye2rect, BLACK)
+            draw_eyes(DISPLAY, normaleye1rect, normaleye2rect, BLACK)
             if random.randint(0, 1000) + \
                     (int(time.time()-status['last_blink'])) >= 1000:
-                random_blink(DISPLAY, eye1rect, eye2rect, 8)
-        for event in pygame.event.get():
+                random_blink(DISPLAY, normaleye1rect, normaleye2rect, 8)
+        for event in pygame.event.get():  # Event loop
             if event.type == pygame.QUIT:
                 pygame.display.quit()
                 pygame.quit()
                 sys.exit()
-            if event.type == pygame.MOUSEBUTTONUP:
+            elif event.type == pygame.MOUSEBUTTONUP:
                 if not status['blinking']:
-                    random_blink(DISPLAY, eye1rect, eye2rect, 8)
+                    random_blink(DISPLAY, normaleye1rect, normaleye2rect, 8)
+            elif event.type == pygame.KEYUP:
+                if event.key == pygame.K_RETURN:
+                    #print(ask_for_input())
+                    update_status('label', f'...{chat_module.get_random_line()}...')
         pygame.display.flip()
         CLOCK.tick(FPS)
 
@@ -94,6 +104,25 @@ def draw_eyes(surface, eye1rect, eye2rect, color):
     pygame.draw.rect(surface, color, eye2rect)
     pygame.draw.rect(surface, BLACK, eye2rect, 5)
     return eye1rect, eye2rect
+
+
+def draw_label(surface:pygame.Surface, text, color, center=(WIDTH/2, HEIGHT/10)):
+    font = pygame.font.SysFont('cambria', 15)
+    if len(text.split()) > 12:
+        text_surf1 = font.render(' '.join(text.split()[:13]), True, color)
+        text_surf2 = font.render(' '.join(text.split()[13:]), True, color)
+        text_rect1 = text_surf1.get_rect()
+        text_rect2 = text_surf2.get_rect()
+        text_rect1.center = center
+        text_rect2.center = (center[0], text_rect1.bottom+3)
+        surface.blit(text_surf1, text_rect1)
+        surface.blit(text_surf2, text_rect2)
+    else:
+        text_surf = font.render(text, True, color)
+        text_rect = text_surf.get_rect()
+        text_rect.center = center
+        surface.blit(text_surf, text_rect)
+
 
 
 def add_action(action, frame:int):
@@ -160,6 +189,23 @@ def onTop(window):
     rc = RECT()
     GetWindowRect(window, byref(rc))
     SetWindowPos(window, -1, rc.left, rc.top, 0, 0, 0x0001)
+
+
+def ask_for_input():
+    popup = tk.Tk()
+    label = tk.Label(popup, text="Nice to see you again.")
+    entry = tk.Entry(popup)
+    chatline = [None]
+
+    def get_text(receiver):
+        receiver[0] = entry.get()
+        popup.destroy()
+    button = tk.Button(popup, text="Enter", command=lambda:get_text(chatline))
+    label.pack()
+    entry.pack()
+    button.pack()
+    popup.mainloop()
+    return chatline[0]
 
 
 if __name__ == '__main__':

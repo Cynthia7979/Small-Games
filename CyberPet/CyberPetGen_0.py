@@ -4,8 +4,46 @@ import math
 import random
 import time
 import tkinter as tk
+import logging
 import chat_module
 from ctypes import windll, Structure, c_long, byref  # Keep on top
+
+WIDTH, HEIGHT = 480, 360
+FPS = 60
+
+#        R   G   B
+GREY  = (80 ,80 ,80 )
+BLACK = (0,  0,  0  )
+WHITE = (255,255,255)
+
+
+class Action(object):
+    def __init__(self, func, *args, priority=0):
+        assert callable(func), 'Received non-function variable:'+str(func)
+        self.func = func
+        self.args = args
+        self.priority = priority
+
+    def do(self):
+        try:
+            _ = self.func(*self.args)
+            LOGGER.debug(f'Called {self.func.__name__}({self.args}).')
+            return _
+        except Exception as e:
+            print(self)
+            raise e
+
+    def __repr__(self):
+        return self.func.__name__ + str(self.args)
+
+    def __gt__(self, other):
+        return self.priority > other.priority
+
+    def __ge__(self, other):
+        return self.priority >= other.priority
+
+    def __eq__(self, other):
+        return self.priority == other.priority
 
 
 class RECT(Structure):
@@ -19,57 +57,42 @@ class RECT(Structure):
     def height(self): return self.bottom - self.top
 
 
-WIDTH, HEIGHT = 480, 360
-FPS = 60
-
-#        R   G   B
-GREY  = (80 ,80 ,80 )
-BLACK = (0,  0,  0  )
-WHITE = (255,255,255)
-
-
-class Action(object):
-    def __init__(self, func, *args):
-        self.func = func
-        self.args = args
-
-    def do(self):
-        return self.func(*self.args)
-
-    def __repr__(self):
-        return self.func.__name__ + str(self.args)
-
-
 def main():
-    global DISPLAY, CLOCK, update_sequence, status
+    global DISPLAY, CLOCK, LOGGER, update_sequence, status
 
     pygame.init()
     pygame.font.init()
     chat_module.init()
+    logging_init()
 
     DISPLAY = pygame.display.set_mode((WIDTH, HEIGHT))
     CLOCK = pygame.time.Clock()
     update_sequence = [[]]
     status = {'blinking': False,
               'last_blink': time.time(),
-              'label': ''}
+              'label': ''
+              }
 
-    normaleye1rect = pygame.Rect((194, 110, 25, 98))
-    normaleye2rect = pygame.Rect((263, 110, 25, 98))  # TODO: Change this to relative position
+    normaleye1rect = pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27))
+    normaleye2rect = pygame.Rect((WIDTH*0.54, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27))
+    face_rect = pygame.Rect(0, 0, HEIGHT / 2, HEIGHT / 2)
+    face_rect.center = (WIDTH / 2, HEIGHT / 2)
+
     pygame.display.set_caption("CyberPet Gen.0")
     pygame.display.set_icon(image('icon.png'))
+
     while True:  # Game Loop
         # if update_sequence: print(update_sequence)
         DISPLAY.fill(GREY)
         onTop(pygame.display.get_wm_info()['window'])
-        face_rect = draw_face(DISPLAY)
-        draw_label(DISPLAY, status['label'], WHITE)
-        do_next()
+        add_action(Action(draw_face, DISPLAY, face_rect))
+        add_action(Action(draw_label, DISPLAY, status['label'], WHITE))
         if not status['blinking']:
-            draw_eyes(DISPLAY, normaleye1rect, normaleye2rect, BLACK)
+            add_action(Action(draw_eyes, DISPLAY, normaleye1rect, normaleye2rect, BLACK, priority=1))
             if random.randint(0, 1000) + \
                     (int(time.time()-status['last_blink'])) >= 1000:
                 random_blink(DISPLAY, normaleye1rect, normaleye2rect, 8)
+
         for event in pygame.event.get():  # Event loop
             if event.type == pygame.QUIT:
                 pygame.display.quit()
@@ -82,6 +105,7 @@ def main():
                 if event.key == pygame.K_RETURN:
                     #print(ask_for_input())
                     update_status('label', f'...{chat_module.get_random_line()}...')
+        do_next()
         pygame.display.flip()
         CLOCK.tick(FPS)
 
@@ -90,9 +114,7 @@ def image(path):
     return pygame.image.load(path).convert_alpha()
 
 
-def draw_face(surface):
-    face_rect = pygame.Rect(0, 0, HEIGHT / 2, HEIGHT / 2)
-    face_rect.center = (WIDTH / 2, HEIGHT / 2)
+def draw_face(surface, face_rect):
     pygame.draw.rect(surface, WHITE, face_rect)
     pygame.draw.rect(surface, BLACK, face_rect, 5)
     return face_rect
@@ -124,24 +146,6 @@ def draw_label(surface:pygame.Surface, text, color, center=(WIDTH/2, HEIGHT/10))
         surface.blit(text_surf, text_rect)
 
 
-
-def add_action(action, frame:int):
-    try:
-        update_sequence[frame].append(action)
-    except IndexError:
-        update_sequence.append([action])
-
-
-def do_next():
-    try:
-        action_sequence = update_sequence[0]
-        for action in action_sequence:
-            action.do()
-        update_sequence.pop(0)
-    except IndexError:
-        return
-
-
 def blink(surface, eye1rect, eye2rect, speed, offset=0):
     center1, center2 = eye1rect.center, eye2rect.center
     eye1rect_new, eye2rect_new = eye1rect.copy(), eye2rect.copy()
@@ -151,7 +155,7 @@ def blink(surface, eye1rect, eye2rect, speed, offset=0):
     for i in range(0, int(240/speed)):
         height_multiplier = math.sqrt(abs((i/120*speed)-1))  # y = √|x-1|, x∈[0,2]
         width_multiplier = -0.125*i/120 * (i/60-4) + 1  # y = -0.125x(x-4)+1, x∈[0,4]
-        add_action(Action(draw_eyes, surface, eye1rect_new, eye2rect_new, BLACK), i+offset)
+        add_action(Action(draw_eyes, surface, eye1rect_new, eye2rect_new, BLACK, priority=1), i+offset)
         # Shapeshift the eyes
         eye1rect_new, eye2rect_new = eye1rect_new.copy(), eye2rect_new.copy()
         eye1rect_new.height, eye2rect_new.height = \
@@ -170,17 +174,34 @@ def blink_twice(surface, eye1rect, eye2rect, speed):
     # print(update_sequence)
 
 
-def update_status(key, value):
-    status[key] = value
-    return key, value
-
-
 def random_blink(surface, eye1rect, eye2rect, speed):
     if random.randint(0, 1) == 0:
         blink_twice(surface, eye1rect, eye2rect, speed)
     else:
         blink(surface, eye1rect, eye2rect, speed)
     update_status('last_blink', time.time())
+
+
+def add_action(action, frame:int=0):
+    try:
+        update_sequence[frame].append(action)
+    except IndexError:
+        update_sequence.append([action])
+
+
+def do_next():
+    try:
+        action_sequence = sorted(update_sequence[0])
+        for action in action_sequence:
+            action.do()
+        update_sequence.pop(0)
+    except IndexError:
+        return
+
+
+def update_status(key, value):
+    status[key] = value
+    return key, value
 
 
 def onTop(window):
@@ -206,6 +227,19 @@ def ask_for_input():
     button.pack()
     popup.mainloop()
     return chatline[0]
+
+
+def logging_init():
+    global LOGGER
+
+    default_ch = logging.StreamHandler()  # Channel Handler
+    default_fh = logging.FileHandler('PetLife!.log')
+    default_ch.setLevel(logging.DEBUG)
+    default_fh.setLevel(logging.DEBUG)
+    LOGGER = logging.getLogger('CyberPet')
+    LOGGER.setLevel(logging.DEBUG)
+    LOGGER.addHandler(default_ch)
+    LOGGER.addHandler(default_fh)
 
 
 if __name__ == '__main__':

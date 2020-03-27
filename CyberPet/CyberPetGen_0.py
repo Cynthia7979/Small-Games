@@ -9,12 +9,15 @@ import chat_module
 from ctypes import windll, Structure, c_long, byref  # Keep on top
 
 WIDTH, HEIGHT = 480, 360
+# WIDTH, HEIGHT = 240, 180
+CENTER = (WIDTH/2, HEIGHT/2)
 FPS = 60
 
 #        R   G   B
-GREY  = (80 ,80 ,80 )
-BLACK = (0,  0,  0  )
-WHITE = (255,255,255)
+GREY  = (80 , 80 , 80 )
+BLACK = (0,   0,   0  )
+WHITE = (255, 255, 255)
+RED   = (255, 0,   0)
 
 
 class Action(object):
@@ -27,7 +30,7 @@ class Action(object):
     def do(self):
         try:
             _ = self.func(*self.args)
-            LOGGER.debug(f'Called {self.func.__name__}({self.args}).')
+            # LOGGER.debug(f'Called {self.func.__name__}({self.args}).')
             return _
         except Exception as e:
             print(self)
@@ -70,13 +73,26 @@ def main():
     update_sequence = [[]]
     status = {'blinking': False,
               'last_blink': time.time(),
-              'label': ''
+              'label': '',
+              # 'eye1rect': pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27)),
+              # 'eye2rect': pygame.Rect((WIDTH*0.54, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27)),
+              'eye1rect':None,  # Will be defined later by get_eye_rects()
+              'eye2rect':None
               }
 
-    normaleye1rect = pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27))
-    normaleye2rect = pygame.Rect((WIDTH*0.54, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27))
+    # normaleye1rect = pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27))
+    # normaleye2rect = pygame.Rect((WIDTH*0.54, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27))
+    # normaleyesrect = pygame.Rect((normaleye1rect.left, normaleye1rect.top,
+    #                               normaleye2rect.right-normaleye1rect.left,
+    #                               normaleye1rect.height))
+    print(pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27)), pygame.Rect((WIDTH*0.54, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27)))
+    normaleyesrect = pygame.Rect((WIDTH*0.41, HEIGHT*0.3,
+                                  WIDTH*0.18, HEIGHT*0.27))
+    EYE_CENTER = normaleyesrect.center
+    eye_margin = WIDTH*0.08
     face_rect = pygame.Rect(0, 0, HEIGHT / 2, HEIGHT / 2)
-    face_rect.center = (WIDTH / 2, HEIGHT / 2)
+    face_rect.center = CENTER
+    update_eye_rects(normaleyesrect, eye_margin)
 
     pygame.display.set_caption("CyberPet Gen.0")
     pygame.display.set_icon(image('icon.png'))
@@ -86,12 +102,12 @@ def main():
         DISPLAY.fill(GREY)
         onTop(pygame.display.get_wm_info()['window'])
         add_action(Action(draw_face, DISPLAY, face_rect))
-        add_action(Action(draw_label, DISPLAY, status['label'], WHITE))
+        if status['label']: add_action(Action(draw_label, DISPLAY, status['label'], WHITE))
         if not status['blinking']:
-            add_action(Action(draw_eyes, DISPLAY, normaleye1rect, normaleye2rect, BLACK, priority=1))
+            add_action(Action(draw_eyes, DISPLAY, status['eye1rect'], status['eye2rect'], BLACK, priority=1))
             if random.randint(0, 1000) + \
                     (int(time.time()-status['last_blink'])) >= 1000:
-                random_blink(DISPLAY, normaleye1rect, normaleye2rect, 8)
+                random_blink(DISPLAY, status['eye1rect'], status['eye2rect'], [5,6,7])
 
         for event in pygame.event.get():  # Event loop
             if event.type == pygame.QUIT:
@@ -100,12 +116,21 @@ def main():
                 sys.exit()
             elif event.type == pygame.MOUSEBUTTONUP:
                 if not status['blinking']:
-                    random_blink(DISPLAY, normaleye1rect, normaleye2rect, 8)
+                    random_blink(DISPLAY, status['eye1rect'], status['eye2rect'], [5,6,7])
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_RETURN:
                     #print(ask_for_input())
                     update_status('label', f'...{chat_module.get_random_line()}...')
+            elif event.type == pygame.MOUSEMOTION:
+                pos = pygame.mouse.get_pos()
+                x_diff, y_diff = (pos[i] - CENTER[i] for i in (0,1))
+                new_center = (EYE_CENTER[0]+x_diff//100, EYE_CENTER[1]+y_diff//100)
+                normaleyesrect.center = new_center
+                update_eye_rects(normaleyesrect, int(eye_margin))
         do_next()
+        # --------------- INSERT DEBUG CODE HERE ---------------------
+        # pygame.draw.rect(DISPLAY, RED, normaleyesrect)
+        # ----------------- END OF DEBUG RANGE -----------------------
         pygame.display.flip()
         CLOCK.tick(FPS)
 
@@ -146,7 +171,7 @@ def draw_label(surface:pygame.Surface, text, color, center=(WIDTH/2, HEIGHT/10))
         surface.blit(text_surf, text_rect)
 
 
-def blink(surface, eye1rect, eye2rect, speed, offset=0):
+def blink(surface, eye1rect, eye2rect, speed, offset=0, stop_blinking=True):
     center1, center2 = eye1rect.center, eye2rect.center
     eye1rect_new, eye2rect_new = eye1rect.copy(), eye2rect.copy()
     init_w1, init_h1 = eye1rect_new.size
@@ -164,22 +189,31 @@ def blink(surface, eye1rect, eye2rect, speed, offset=0):
             init_w1*width_multiplier, init_w2*width_multiplier
         eye1rect_new.center, eye2rect_new.center = center1, center2
         # print(eye1rect_new.height, eye2rect_new.height)
-    add_action(Action(update_status, 'blinking', False), int(240 / speed) + offset)
+    if stop_blinking: add_action(Action(update_status, 'blinking', False), int(240 / speed) +offset-1)
 
 
 def blink_twice(surface, eye1rect, eye2rect, speed):
-    blink(surface, eye1rect, eye2rect, speed)
+    blink(surface, eye1rect, eye2rect, speed, stop_blinking=False)
     blink(surface, eye1rect, eye2rect, speed, offset=int(240/speed)+random.randint(1,30))
     # print('blink twice added')
     # print(update_sequence)
 
 
 def random_blink(surface, eye1rect, eye2rect, speed):
+    speed = random.choice(speed)
     if random.randint(0, 1) == 0:
         blink_twice(surface, eye1rect, eye2rect, speed)
     else:
         blink(surface, eye1rect, eye2rect, speed)
     update_status('last_blink', time.time())
+
+
+def get_eye_rects(eyesrect:pygame.Rect, margin):
+    LOGGER.debug(f'Getting eyerects using {eyesrect} and margin {margin}...')
+    eye1rect = pygame.Rect(eyesrect.left, eyesrect.top, eyesrect.centerx-margin/2-eyesrect.left, eyesrect.height)
+    eye2rect = pygame.Rect(eyesrect.centerx+margin/2, eyesrect.top, eyesrect.right-eyesrect.centerx-margin/2, eyesrect.height)
+    print(eye1rect, eye2rect)
+    return eye1rect, eye2rect
 
 
 def add_action(action, frame:int=0):
@@ -202,6 +236,12 @@ def do_next():
 def update_status(key, value):
     status[key] = value
     return key, value
+
+
+def update_eye_rects(eyesrect, margin):
+    eye1rect, eye2rect = get_eye_rects(eyesrect, margin)
+    update_status('eye1rect', eye1rect)
+    update_status('eye2rect', eye2rect)
 
 
 def onTop(window):

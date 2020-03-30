@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import pygame
 import sys
 import random
@@ -22,27 +23,16 @@ class RECT(Structure):  # 直接从CyberPet搬过来
 
 def main():
     global LARGER_FONT, SMALLER_FONT, CLOCK, FPS, DISPLAY
-    pygame.init()
-    pygame.font.init()
-    pygame.display.set_caption('BREATHE')
-    pygame.display.set_icon(pygame.image.load('breathe.png'))
-
-    DISPLAY = pygame.display.set_mode((WIDTH, HEIGHT))
-    CLOCK = pygame.time.Clock()
-    FPS = 60
-    LARGER_FONT = pygame.font.SysFont('Microsoft YaHei', 132)
-    SMALLER_FONT = pygame.font.SysFont('Microsoft YaHei', 64)
 
     POWER_BREATHING_SEQUENCE = [('INHALE', 4), ('EXHALE', 8)]
-    FOUR_SEVEN_EIGHT_SEQUENCE = [('INHALE', 4), ('HOLD', 7), ('EXHALE', 8)]
+    FOUR_SEVEN_EIGHT_SEQUENCE= [('INHALE', 4), ('HOLD', 7), ('EXHALE', 8)]
     EQUAL_BREATHING_SEQUENCE = [('INHALE', 5), ('EXHALE', 5)]
+    SQUARE_BREATHING_SEQUENCE= [('INHALE', 4), ('HOLD', 4), ('EXHALE', 4), ('HOLD', 4)]
 
     DICT_OF_SEQUENCE = {'Power Breathing': POWER_BREATHING_SEQUENCE, '4-7-8 Breathing': FOUR_SEVEN_EIGHT_SEQUENCE,
-                        'Equal Breathing': EQUAL_BREATHING_SEQUENCE}
+                        'Equal Breathing': EQUAL_BREATHING_SEQUENCE, 'Square Breathing': SQUARE_BREATHING_SEQUENCE,
+                        }
     LIST_OF_SEQUENCE = list(DICT_OF_SEQUENCE.keys())
-
-    number_banner, number_rect = banner(0)
-    label, label_rect = banner('', upper=True)
 
     print('Please choose a sequence, Enter for random:')
     for i, seq in enumerate(LIST_OF_SEQUENCE):
@@ -54,6 +44,22 @@ def main():
         choice = random.choice(LIST_OF_SEQUENCE)
         SEQUENCE = DICT_OF_SEQUENCE[choice]
     print('Presenting:', choice)
+
+    pygame.init()
+    pygame.font.init()
+    pygame.display.set_caption('BREATHE')
+    try:
+        pygame.display.set_icon(pygame.image.load('./breathe.png'))
+    except pygame.error:
+        pass
+
+    DISPLAY = pygame.display.set_mode((WIDTH, HEIGHT))
+    CLOCK = pygame.time.Clock()
+    FPS = 60
+    LARGER_FONT = pygame.font.SysFont('Microsoft YaHei', 132)
+    SMALLER_FONT = pygame.font.SysFont('Microsoft YaHei', 64)
+    number_banner, number_rect = banner(0)
+    label, label_rect = banner('', upper=True)
 
     while True:
         for label_text, length in SEQUENCE:

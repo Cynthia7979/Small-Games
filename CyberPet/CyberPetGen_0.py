@@ -9,7 +9,6 @@ import chat_module
 from ctypes import windll, Structure, c_long, byref  # Keep on top
 
 WIDTH, HEIGHT = 480, 360
-# WIDTH, HEIGHT = 240, 180
 CENTER = (WIDTH/2, HEIGHT/2)
 FPS = 60
 
@@ -18,6 +17,11 @@ GREY  = (80 , 80 , 80 )
 BLACK = (0,   0,   0  )
 WHITE = (255, 255, 255)
 RED   = (255, 0,   0)
+
+LOGGING_LEVEL = logging.INFO
+
+# Syntax Sugars
+RECT, SURF, DEFAULT_RECT = 0, 1, 2
 
 
 class Action(object):
@@ -33,7 +37,7 @@ class Action(object):
             # LOGGER.debug(f'Called {self.func.__name__}({self.args}).')
             return _
         except Exception as e:
-            print(self)
+            LOGGER.error(self)
             raise e
 
     def __repr__(self):
@@ -49,7 +53,7 @@ class Action(object):
         return self.priority == other.priority
 
 
-class RECT(Structure):
+class RECT_(Structure):
     _fields_ = [
     ('left',    c_long),
     ('top',     c_long),
@@ -61,7 +65,7 @@ class RECT(Structure):
 
 
 def main():
-    global DISPLAY, CLOCK, LOGGER, update_sequence, status
+    global DISPLAY, CLOCK, LOGGER, update_sequence, status, draggables
 
     pygame.init()
     pygame.font.init()
@@ -74,20 +78,20 @@ def main():
     status = {'blinking': False,
               'last_blink': time.time(),
               'label': '',
-              # 'eye1rect': pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27)),
-              # 'eye2rect': pygame.Rect((WIDTH*0.54, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27)),
-              'eye1rect':None,  # Will be defined later by get_eye_rects()
-              'eye2rect':None
+              'eye1rect': None,  # Will be defined later by get_eye_rects()
+              'eye2rect': None,
+              'mouse_pos_down': None,
+              'widget_currently_dragging': None
               }
+    draggables = {'testFood': image('testFood.png', default_rect=True, topleft=(0,0))}
+    #                         tuple of (rect, surf)
 
     # normaleye1rect = pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27))
     # normaleye2rect = pygame.Rect((WIDTH*0.54, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27))
     # normaleyesrect = pygame.Rect((normaleye1rect.left, normaleye1rect.top,
     #                               normaleye2rect.right-normaleye1rect.left,
     #                               normaleye1rect.height))
-    print(pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27)), pygame.Rect((WIDTH*0.54, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27)))
-    normaleyesrect = pygame.Rect((WIDTH*0.41, HEIGHT*0.3,
-                                  WIDTH*0.18, HEIGHT*0.27))
+    normaleyesrect = pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.18, HEIGHT*0.27))
     EYE_CENTER = normaleyesrect.center
     eye_margin = WIDTH*0.08
     face_rect = pygame.Rect(0, 0, HEIGHT / 2, HEIGHT / 2)
@@ -97,46 +101,83 @@ def main():
     pygame.display.set_caption("CyberPet Gen.0")
     pygame.display.set_icon(image('icon.png'))
 
+    # --------------- INSERT DEBUG CODE HERE ---------------------
+    # print(pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27)),
+    #       pygame.Rect((WIDTH*0.54, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27)))
+    # ----------------- END OF DEBUG RANGE -----------------------
+
     while True:  # Game Loop
-        # if update_sequence: print(update_sequence)
         DISPLAY.fill(GREY)
         onTop(pygame.display.get_wm_info()['window'])
         add_action(Action(draw_face, DISPLAY, face_rect))
-        if status['label']: add_action(Action(draw_label, DISPLAY, status['label'], WHITE))
+        add_action(Action(draw_widgets, DISPLAY))
+
+        # Collision-related conditionals
+        if draggables['testFood'][RECT].colliderect(face_rect):
+            draggables['testFood'][RECT] = draggables['testFood'][DEFAULT_RECT].copy()
+            show_comfort(DISPLAY, face_rect)
+            stop_dragging()
+
+        # Status-related conditionals
+        if status['label']:
+            add_action(Action(draw_label, DISPLAY, status['label'], WHITE))
         if not status['blinking']:
             add_action(Action(draw_eyes, DISPLAY, status['eye1rect'], status['eye2rect'], BLACK, priority=1))
             if random.randint(0, 1000) + \
                     (int(time.time()-status['last_blink'])) >= 1000:
                 random_blink(DISPLAY, status['eye1rect'], status['eye2rect'], [5,6,7])
 
-        for event in pygame.event.get():  # Event loop
+        # Event loop
+        for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.display.quit()
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.MOUSEBUTTONUP:
-                if not status['blinking']:
-                    random_blink(DISPLAY, status['eye1rect'], status['eye2rect'], [5,6,7])
-            elif event.type == pygame.KEYUP:
+            if event.type == pygame.KEYUP:
                 if event.key == pygame.K_RETURN:
                     #print(ask_for_input())
                     update_status('label', f'...{chat_module.get_random_line()}...')
-            elif event.type == pygame.MOUSEMOTION:
-                pos = pygame.mouse.get_pos()
-                x_diff, y_diff = (pos[i] - CENTER[i] for i in (0,1))
-                new_center = (EYE_CENTER[0]+x_diff//100, EYE_CENTER[1]+y_diff//100)
+            if event.type == pygame.MOUSEMOTION:
+                # Look at the mouse
+                mouse_pos = pygame.mouse.get_pos()
+                x_diff, y_diff = (mouse_pos[i] - CENTER[i] for i in (0,1))
+                new_center = (EYE_CENTER[0]+x_diff//15, EYE_CENTER[1]+y_diff//30)
                 normaleyesrect.center = new_center
                 update_eye_rects(normaleyesrect, int(eye_margin))
-        do_next()
+
+                # Move widgets
+                if status['widget_currently_dragging']:
+                    ori_wid_x, ori_wid_y = draggables[status['widget_currently_dragging']][RECT].topleft
+                    ori_mouse_x, ori_mouse_y = status['mouse_pos_down']
+                    new_mouse_x, new_mouse_y = mouse_pos
+                    change_x = new_mouse_x-ori_mouse_x
+                    change_y = new_mouse_y-ori_mouse_y
+                    draggables[status['widget_currently_dragging']][RECT].topleft = ori_wid_x+change_x, ori_wid_y+change_y
+                    update_status('mouse_pos_down', mouse_pos)
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                LOGGER.info('Mouse Button Down')
+                mouse_pos = event.pos
+                if not status['mouse_pos_down']:
+                    update_status('mouse_pos_down', mouse_pos)
+                    for w_name, (w_rect, r_surf, _) in draggables.items():
+                        if w_rect.collidepoint(mouse_pos):
+                            update_status('widget_currently_dragging', w_name)
+            if event.type == pygame.MOUSEBUTTONUP:
+                LOGGER.info('Mouse Button Up')
+                if status['widget_currently_dragging']:
+                    stop_dragging()
+                else:
+                    if not status['blinking']:
+                        random_blink(DISPLAY, status['eye1rect'], status['eye2rect'], [5, 6, 7])
         # --------------- INSERT DEBUG CODE HERE ---------------------
         # pygame.draw.rect(DISPLAY, RED, normaleyesrect)
         # ----------------- END OF DEBUG RANGE -----------------------
+        do_next()
         pygame.display.flip()
         CLOCK.tick(FPS)
 
 
-def image(path):
-    return pygame.image.load(path).convert_alpha()
+# ------------ Draw Related ------------
 
 
 def draw_face(surface, face_rect):
@@ -169,6 +210,13 @@ def draw_label(surface:pygame.Surface, text, color, center=(WIDTH/2, HEIGHT/10))
         text_rect = text_surf.get_rect()
         text_rect.center = center
         surface.blit(text_surf, text_rect)
+
+
+def draw_widgets(surface):
+    for (w_rect, w_surf, _) in draggables.values():
+        surface.blit(w_surf, w_rect)
+
+# ------------ Animation Related ------------
 
 
 def blink(surface, eye1rect, eye2rect, speed, offset=0, stop_blinking=True):
@@ -208,12 +256,14 @@ def random_blink(surface, eye1rect, eye2rect, speed):
     update_status('last_blink', time.time())
 
 
-def get_eye_rects(eyesrect:pygame.Rect, margin):
-    LOGGER.debug(f'Getting eyerects using {eyesrect} and margin {margin}...')
-    eye1rect = pygame.Rect(eyesrect.left, eyesrect.top, eyesrect.centerx-margin/2-eyesrect.left, eyesrect.height)
-    eye2rect = pygame.Rect(eyesrect.centerx+margin/2, eyesrect.top, eyesrect.right-eyesrect.centerx-margin/2, eyesrect.height)
-    print(eye1rect, eye2rect)
-    return eye1rect, eye2rect
+def show_comfort(surface, face_rect):  # TODO
+    # First become thinner and taller,
+    # Then become fatter and shorter
+    # As if it was a slime
+    # At last go back to normal
+    pass
+
+# ------------ Action Related ------------
 
 
 def add_action(action, frame:int=0):
@@ -243,11 +293,25 @@ def update_eye_rects(eyesrect, margin):
     update_status('eye1rect', eye1rect)
     update_status('eye2rect', eye2rect)
 
+# ------------ Misc ------------
+
+
+def image(path, rect=False, default_rect=False, topleft=(0,0)):
+    img = pygame.image.load(path).convert_alpha()
+    img_rect = img.get_rect()
+    img_rect.topleft = topleft
+    img_default_rect = img_rect.copy()
+    if default_rect:
+        return [img_rect, img, img_default_rect]
+    elif rect:
+        return [img_rect, img]
+    return img
+
 
 def onTop(window):
     SetWindowPos = windll.user32.SetWindowPos
     GetWindowRect = windll.user32.GetWindowRect
-    rc = RECT()
+    rc = RECT_()
     GetWindowRect(window, byref(rc))
     SetWindowPos(window, -1, rc.left, rc.top, 0, 0, 0x0001)
 
@@ -274,12 +338,26 @@ def logging_init():
 
     default_ch = logging.StreamHandler()  # Channel Handler
     default_fh = logging.FileHandler('PetLife!.log')
-    default_ch.setLevel(logging.DEBUG)
-    default_fh.setLevel(logging.DEBUG)
+    default_ch.setLevel(LOGGING_LEVEL)
+    default_fh.setLevel(LOGGING_LEVEL)
     LOGGER = logging.getLogger('CyberPet')
     LOGGER.setLevel(logging.DEBUG)
     LOGGER.addHandler(default_ch)
     LOGGER.addHandler(default_fh)
+
+
+def stop_dragging():
+    update_status('mouse_pos_down', None)
+    update_status('widget_currently_dragging', None)
+    update_status('drag_pos_diff', (None, None))
+
+
+def get_eye_rects(eyesrect:pygame.Rect, margin):
+    LOGGER.debug(f'Getting eyerects using {eyesrect} and margin {margin}...')
+    eye1rect = pygame.Rect(eyesrect.left, eyesrect.top, eyesrect.centerx-margin/2-eyesrect.left, eyesrect.height)
+    eye2rect = pygame.Rect(eyesrect.centerx+margin/2, eyesrect.top, eyesrect.right-eyesrect.centerx-margin/2, eyesrect.height)
+    #print(eye1rect, eye2rect)
+    return eye1rect, eye2rect
 
 
 if __name__ == '__main__':

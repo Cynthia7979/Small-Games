@@ -1,3 +1,4 @@
+# TODO: Make it possible to pass `status name` as argument 我疯了
 import pygame
 import sys, os
 import math
@@ -20,6 +21,7 @@ RED   = (255, 0,   0)
 
 LOGGING_LEVEL = logging.INFO
 
+
 # Syntax Sugars
 RECT, SURF, DEFAULT_RECT = 0, 1, 2
 
@@ -34,10 +36,10 @@ class Action(object):
     def do(self):
         try:
             _ = self.func(*self.args)
-            # LOGGER.debug(f'Called {self.func.__name__}({self.args}).')
+            LOGGER.debug(f'Called {self.func.__name__}({self.args}).')
             return _
         except Exception as e:
-            LOGGER.error(self)
+            LOGGER.error(f'{e.__class__.__name__}: {self}')
             raise e
 
     def __repr__(self):
@@ -76,10 +78,14 @@ def main():
     CLOCK = pygame.time.Clock()
     update_sequence = [[]]
     status = {'blinking': False,
+              'showing_comfort': False,
               'last_blink': time.time(),
               'label': '',
               'eye1rect': None,  # Will be defined later by get_eye_rects()
               'eye2rect': None,
+              'eye_margin': WIDTH*0.08,
+              'eyes_rect': pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.18, HEIGHT*0.27)),
+              'eyes_center': None,  # Will be defined in the code below
               'mouse_pos_down': None,
               'widget_currently_dragging': None
               }
@@ -88,15 +94,14 @@ def main():
 
     # normaleye1rect = pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27))
     # normaleye2rect = pygame.Rect((WIDTH*0.54, HEIGHT*0.3, WIDTH*0.05, HEIGHT*0.27))
-    # normaleyesrect = pygame.Rect((normaleye1rect.left, normaleye1rect.top,
+    # status['eyes_rect'] = pygame.Rect((normaleye1rect.left, normaleye1rect.top,
     #                               normaleye2rect.right-normaleye1rect.left,
     #                               normaleye1rect.height))
-    normaleyesrect = pygame.Rect((WIDTH*0.41, HEIGHT*0.3, WIDTH*0.18, HEIGHT*0.27))
-    EYE_CENTER = normaleyesrect.center
-    eye_margin = WIDTH*0.08
+    status['eyes_center'] = status['eyes_rect'].center
+    update_eye_rects(status['eyes_rect'], status['eye_margin'])
     face_rect = pygame.Rect(0, 0, HEIGHT / 2, HEIGHT / 2)
     face_rect.center = CENTER
-    update_eye_rects(normaleyesrect, eye_margin)
+
 
     pygame.display.set_caption("CyberPet Gen.0")
     pygame.display.set_icon(image('icon.png'))
@@ -109,8 +114,9 @@ def main():
     while True:  # Game Loop
         DISPLAY.fill(GREY)
         onTop(pygame.display.get_wm_info()['window'])
-        add_action(Action(draw_face, DISPLAY, face_rect))
-        add_action(Action(draw_widgets, DISPLAY))
+        do_next()
+
+        add_action(draw_widgets, DISPLAY)
 
         # Collision-related conditionals
         if draggables['testFood'][RECT].colliderect(face_rect):
@@ -120,12 +126,15 @@ def main():
 
         # Status-related conditionals
         if status['label']:
-            add_action(Action(draw_label, DISPLAY, status['label'], WHITE))
+            add_action(draw_label, DISPLAY, status['label'], WHITE)
         if not status['blinking']:
-            add_action(Action(draw_eyes, DISPLAY, status['eye1rect'], status['eye2rect'], BLACK, priority=1))
-            if random.randint(0, 1000) + \
-                    (int(time.time()-status['last_blink'])) >= 1000:
-                random_blink(DISPLAY, status['eye1rect'], status['eye2rect'], [5,6,7])
+            add_action(draw_eyes, DISPLAY, status['eye1rect'], status['eye2rect'], BLACK, priority=1)
+            if not (status['showing_comfort'] or status['widget_currently_dragging']):
+                if random.randint(0, 1000) + \
+                        (int(time.time()-status['last_blink'])) >= 1000:
+                    random_blink(DISPLAY, status['eye1rect'], status['eye2rect'], [5,6,7])
+        if not status['showing_comfort']:
+            add_action(draw_face, DISPLAY, face_rect)
 
         # Event loop
         for event in pygame.event.get():
@@ -141,9 +150,9 @@ def main():
                 # Look at the mouse
                 mouse_pos = pygame.mouse.get_pos()
                 x_diff, y_diff = (mouse_pos[i] - CENTER[i] for i in (0,1))
-                new_center = (EYE_CENTER[0]+x_diff//15, EYE_CENTER[1]+y_diff//30)
-                normaleyesrect.center = new_center
-                update_eye_rects(normaleyesrect, int(eye_margin))
+                new_center = (status['eyes_center'][0]+x_diff//15, status['eyes_center'][1]+y_diff//30)
+                status['eyes_rect'].center = new_center
+                update_eye_rects(status['eyes_rect'], int(status['eye_margin']))
 
                 # Move widgets
                 if status['widget_currently_dragging']:
@@ -170,9 +179,9 @@ def main():
                     if not status['blinking']:
                         random_blink(DISPLAY, status['eye1rect'], status['eye2rect'], [5, 6, 7])
         # --------------- INSERT DEBUG CODE HERE ---------------------
-        # pygame.draw.rect(DISPLAY, RED, normaleyesrect)
+        # pygame.draw.rect(DISPLAY, RED, status['eyes_rect'])
+        print(status['eyes_rect'])
         # ----------------- END OF DEBUG RANGE -----------------------
-        do_next()
         pygame.display.flip()
         CLOCK.tick(FPS)
 
@@ -224,11 +233,11 @@ def blink(surface, eye1rect, eye2rect, speed, offset=0, stop_blinking=True):
     eye1rect_new, eye2rect_new = eye1rect.copy(), eye2rect.copy()
     init_w1, init_h1 = eye1rect_new.size
     init_w2, init_h2 = eye2rect_new.size
-    add_action(Action(update_status, 'blinking', True), offset)
+    add_action(update_status, 'blinking', True, frame=offset)
     for i in range(0, int(240/speed)):
         height_multiplier = math.sqrt(abs((i/120*speed)-1))  # y = √|x-1|, x∈[0,2]
         width_multiplier = -0.125*i/120 * (i/60-4) + 1  # y = -0.125x(x-4)+1, x∈[0,4]
-        add_action(Action(draw_eyes, surface, eye1rect_new, eye2rect_new, BLACK, priority=1), i+offset)
+        add_action(draw_eyes, surface, eye1rect_new, eye2rect_new, BLACK, frame=i+offset, priority=1)
         # Shapeshift the eyes
         eye1rect_new, eye2rect_new = eye1rect_new.copy(), eye2rect_new.copy()
         eye1rect_new.height, eye2rect_new.height = \
@@ -237,7 +246,7 @@ def blink(surface, eye1rect, eye2rect, speed, offset=0, stop_blinking=True):
             init_w1*width_multiplier, init_w2*width_multiplier
         eye1rect_new.center, eye2rect_new.center = center1, center2
         # print(eye1rect_new.height, eye2rect_new.height)
-    if stop_blinking: add_action(Action(update_status, 'blinking', False), int(240 / speed) +offset-1)
+    if stop_blinking: add_action(update_status, 'blinking', False, frame=int(240 / speed) +offset-1)
 
 
 def blink_twice(surface, eye1rect, eye2rect, speed):
@@ -261,12 +270,41 @@ def show_comfort(surface, face_rect):  # TODO
     # Then become fatter and shorter
     # As if it was a slime
     # At last go back to normal
+    midbottom = face_rect.midbottom
+    init_w, init_h = face_rect.size
+    init_eye_x, init_eye_y = status['eyes_center']
+    face_rect_new = face_rect.copy()
+    add_action(update_status, 'showing_comfort', True)
+    for t in range(0, 30):  # fh=0.3ht/30+h, fw=-0.1wt/30+w, f_e=0.1yt/30+y
+        # This time I'm not using multipliers. Instead, the y values are directly used as heights
+        add_action(draw_face, surface, face_rect_new.copy(), frame=t)
+        f_h = lambda t: 0.3*init_h*t/30+init_h
+        f_w = lambda t: -0.1*init_w*t/30+init_w
+        f_eye = lambda t: 0.1*init_eye_y*t/30+init_eye_y
+        face_rect_new.size = (f_w(t), f_h(t))
+        face_rect_new.midbottom = midbottom
+        # TODO The following three steps should be packed together
+        add_action(update_status, 'eyes_center', (init_eye_x, f_eye(t)), frame=t)
+        status['eyes_rect'].center = status['eyes_center']
+        add_action(update_eye_rects, status['eyes_rect'], status['eye_margin'], frame=t)
+    for t in range(0, 30):  # fh=-0.3ht/30+1.5h, fw=0.1wt/30+w
+        add_action(draw_face, surface, face_rect_new.copy(), frame=t+30)
+        f_h = lambda t: -0.3*init_h*t/30 + 1.3*init_h
+        f_w = lambda t: 0.1*init_w*t/30 + 0.9*init_w
+        f_eye = lambda t: -0.1*init_eye_y*t/30 + 1.1*init_eye_y
+        face_rect_new.size = (f_w(t), f_h(t))
+        face_rect_new.midbottom = midbottom
+        add_action(update_status, 'eyes_center', (init_eye_x, f_eye(t)), frame=t+30)
+        status['eyes_rect'].center = status['eyes_center']
+        add_action(update_eye_rects, status['eyes_rect'], status['eye_margin'], frame=t+30)
+    add_action(update_status, 'showing_comfort', False, frame=60)
     pass
 
 # ------------ Action Related ------------
 
 
-def add_action(action, frame:int=0):
+def add_action(func, *args, priority=0, frame:int=0):
+    action = Action(func, *args, priority=priority)
     try:
         update_sequence[frame].append(action)
     except IndexError:
@@ -353,7 +391,7 @@ def stop_dragging():
 
 
 def get_eye_rects(eyesrect:pygame.Rect, margin):
-    LOGGER.debug(f'Getting eyerects using {eyesrect} and margin {margin}...')
+    #LOGGER.debug(f'Getting eyerects using {eyesrect} and margin {margin}...')
     eye1rect = pygame.Rect(eyesrect.left, eyesrect.top, eyesrect.centerx-margin/2-eyesrect.left, eyesrect.height)
     eye2rect = pygame.Rect(eyesrect.centerx+margin/2, eyesrect.top, eyesrect.right-eyesrect.centerx-margin/2, eyesrect.height)
     #print(eye1rect, eye2rect)

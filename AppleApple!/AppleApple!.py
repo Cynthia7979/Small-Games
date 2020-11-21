@@ -100,11 +100,11 @@ placeToMobs = {'forest': (tree, tree, tree, tree, tree), 'farm': (tree, stone, t
 
 
 def main():
+    global name, apple, appleTree, costPerTree, startBlood, pack
     pygame.init()
     pack = {}
     # load stats from file
     name, apple, appleTree, costPerTree, startBlood, thingsToAdd = readFile()
-    global name, apple, appleTree, costPerTree, startBlood, pack
     # add thing to pack
     for thing in thingsToAdd:
         if thing in pack.keys():
@@ -558,7 +558,7 @@ def placeButton(surf, font, text, x, y):
 
 
 def readFile():
-    f1 = open('.\UsrStat.txt')
+    f1 = open('./UsrStat.txt')
     texts = f1.read()
     category = texts.split('\n\n') # player stats and pack things
     details = []
@@ -636,7 +636,7 @@ def save(name,apple,appleTree,costPerTree,blood,pack):
     #packStr = str(serializedLstPack)
     statStr = '\n'.join((name,apple,appleTree,costPerTree,blood))
 
-    f1 = open('.\UsrStat.txt','w')
+    f1 = open('./UsrStat.txt','w')
     f1.write(statStr)
     f1.close()
     f2 = open('.\pack.txt','wb')

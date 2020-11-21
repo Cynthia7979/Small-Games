@@ -40,7 +40,7 @@ class Weapon(Item):
 
 class Food(Item):
     def __init__(self, itemName, fullness, craftable, cost,recipe=(), isPotion=False, potionType=None, useDegree=None):
-        super(Food,self).__init__(itemName, False, True, False, craftable, cost,recipe)
+        super(Food,self).__init__(itemName, cost,recipe)
         self.fullness = fullness
         self.isPotion = isPotion
         self.type = potionType
@@ -48,7 +48,7 @@ class Food(Item):
 
 class Material(Item):
     def __init__(self, itemName, isCraftable, cost, recipe=()):
-        super(Material,self).__init__(itemName, True, False, False, isCraftable, cost, recipe)
+        super(Material,self).__init__(itemName, cost, recipe)
 
 class Mob(object):
     def __init__(self, name, blood, damage, trophies):
@@ -386,7 +386,7 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
         itemSurf = font.render(itemName, True, BLACK)
         itemRect = itemSurf.get_rect()
         itemRect.center = (400,300)
-        numSurf = font.render(str(pack.values()[itemNames.index(itemName)]),True,BLACK)
+        numSurf = font.render(str(list(pack.values())[itemNames.index(itemName)]),True,BLACK)
         numRect = numSurf.get_rect()
         numRect.topleft = (500,250)
         itemTexts[itemName] = [itemSurf,itemRect,numSurf,numRect]
@@ -406,11 +406,11 @@ def packScreen(DISPLAYSURF,font,pack,currentItem):
             elif pygame.Rect(x,y,1,1).colliderect(backButtonRect):
                 back = True
             elif pygame.Rect(x,y,1,1).colliderect(sellButtonRect):
-                sell = pack.keys()[currentItem % len(pack.keys())]
+                sell = list(pack.keys())[currentItem % len(pack.keys())]
             elif pygame.Rect(x, y, 1, 1).colliderect(storeButtonRect):
                 screen = 'store'
             elif pygame.Rect(x, y, 1, 1).colliderect(equipButtonRect):
-                weapon = pack.keys()[currentItem % len(pack.keys())]
+                weapon = list(pack.keys())[currentItem % len(pack.keys())]
                 #print str(weapon)
             elif pygame.Rect(x,y,1,1).colliderect(craftButtonRect):
                 screen = 'craft'

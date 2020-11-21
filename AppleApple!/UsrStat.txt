@@ -1,5 +1,5 @@
 Cynthia7979#usrname
-58#apple
-4#appleTree
-86#costPerTree
+56#apple
+5#appleTree
+103#costPerTree
 20#blood
